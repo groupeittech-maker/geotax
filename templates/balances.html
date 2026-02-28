@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balances Financières</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Balances Financières</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <div class="balances-period-selector">
+                <label>Période :</label>
+                <select id="periodeMois" onchange="loadBalances()">
+                    <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                    <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                    <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                    <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                </select>
+                <select id="periodeAnnee" onchange="loadBalances()"></select>
+            </div>
+
+            <section class="balance-section">
+                <h2>1. Balance par taxe</h2>
+                <p class="section-desc">Montants recouvrés par type de taxe pour la période sélectionnée.</p>
+                <div class="balance-taxes-grid" id="balanceTaxesGrid">
+                    <div class="loading">Chargement...</div>
+                </div>
+                <div class="balance-total">
+                    <strong>Total recouvré :</strong> <span id="totalParTaxes">0</span> FCFA
+                </div>
+            </section>
+
+            <section class="balance-section">
+                <h2>2. Répartition par partenaire</h2>
+                <p class="section-desc">Répartition du montant total recouvré entre les partenaires (pourcentages configurables dans Paramétrage).</p>
+                <div class="repartition-grid" id="repartitionGrid">
+                    <div class="loading">Chargement...</div>
+                </div>
+                <div class="balance-total">
+                    <strong>Total recouvré :</strong> <span id="totalRepartition">0</span> FCFA
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+        async function loadBalances() {
+            const mois = document.getElementById('periodeMois').value;
+            const annee = document.getElementById('periodeAnnee').value;
+            
+            await Promise.all([loadBalanceParTaxes(mois, annee), loadBalanceRepartition(mois, annee)]);
+        }
+
+        async function loadBalanceParTaxes(mois, annee) {
+            try {
+                const response = await fetch(`/api/balance-par-taxes?mois=${mois}&annee=${annee}`);
+                const data = await response.json();
+                
+                const grid = document.getElementById('balanceTaxesGrid');
+                
+                if (data.balance_par_taxe && data.balance_par_taxe.length > 0) {
+                    grid.innerHTML = data.balance_par_taxe.map(t => `
+                        <div class="balance-tax-card">
+                            <div class="balance-tax-icon">📋</div>
+                            <div class="balance-tax-nom">${t.taxe_nom}</div>
+                            <div class="balance-tax-code">${t.taxe_code}</div>
+                            <div class="balance-tax-institut">${t.institut_nom || '-'}</div>
+                            <div class="balance-tax-paiements">${t.nombre_paiements} paiement(s)</div>
+                            <div class="balance-tax-montant">${new Intl.NumberFormat('fr-FR').format(t.montant_recouvre)} FCFA</div>
+                        </div>
+                    `).join('');
+                    document.getElementById('totalParTaxes').textContent = new Intl.NumberFormat('fr-FR').format(data.total_recouvre);
+                } else {
+                    grid.innerHTML = '<div class="no-data">Aucune donnée pour cette période</div>';
+                    document.getElementById('totalParTaxes').textContent = '0';
+                }
+            } catch (e) {
+                document.getElementById('balanceTaxesGrid').innerHTML = '<div class="error">Erreur de chargement</div>';
+            }
+        }
+
+        async function loadBalanceRepartition(mois, annee) {
+            try {
+                const response = await fetch(`/api/balance-repartition?mois=${mois}&annee=${annee}`);
+                const data = await response.json();
+                
+                const grid = document.getElementById('repartitionGrid');
+                const rep = data.repartition || {};
+                
+                const partenaires = [
+                    { key: 'institution', label: 'Institution', icon: '🏛️' },
+                    { key: 'partenaire_technique', label: 'Partenaire technique', icon: '🔧' },
+                    { key: 'mtn', label: 'MTN', icon: '📱' }
+                ];
+                
+                grid.innerHTML = partenaires.map(p => {
+                    const r = rep[p.key] || { pourcentage: 0, montant: 0 };
+                    return `
+                        <div class="repartition-card">
+                            <div class="repartition-icon">${p.icon}</div>
+                            <div class="repartition-label">${p.label}</div>
+                            <div class="repartition-pct">${r.pourcentage}%</div>
+                            <div class="repartition-montant">${new Intl.NumberFormat('fr-FR').format(r.montant)} FCFA</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('totalRepartition').textContent = new Intl.NumberFormat('fr-FR').format(data.total_recouvre || 0);
+            } catch (e) {
+                document.getElementById('repartitionGrid').innerHTML = '<div class="error">Erreur de chargement</div>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            document.getElementById('periodeMois').value = now.getMonth() + 1;
+            const anneeSelect = document.getElementById('periodeAnnee');
+            for (let y = now.getFullYear(); y >= now.getFullYear() - 2; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                if (y === now.getFullYear()) opt.selected = true;
+                anneeSelect.appendChild(opt);
+            }
+            loadBalances();
+        });
+    </script>
+</body>
+</html>

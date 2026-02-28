@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Paiements</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Gestion des Paiements</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <section class="boutiques-list-section">
+                <div class="section-header">
+                    <h2>📋 Gestion des Paiements</h2>
+                </div>
+
+                <!-- Onglets -->
+                <div class="tabs">
+                    <button type="button" class="tab-btn active" id="tabEnAttente" onclick="switchTab('en_attente')">
+                        ⚠️ Non payés (en retard)
+                    </button>
+                    <button type="button" class="tab-btn" id="tabTous" onclick="switchTab('tous')">
+                        📋 Tous les paiements
+                    </button>
+                </div>
+
+                <!-- Période pour l'onglet Non payés -->
+                <div id="periodeEnAttente" style="margin-bottom: 15px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                    <label>Période :</label>
+                    <select id="periodeMoisEnAttente" onchange="loadPaiements()">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                    <input type="number" id="periodeAnneeEnAttente" min="2020" max="2100" onchange="loadPaiements()" style="width: 90px;">
+                </div>
+
+                <!-- Barre de recherche -->
+                <div class="search-bar">
+                    <input type="text" id="searchPaiement" placeholder="Rechercher par commerce, institution, taxe..." 
+                           oninput="debouncedSearch()" class="search-input">
+                    <span id="searchCount" class="search-count"></span>
+                </div>
+
+                <!-- Filtres compacts -->
+                <div class="filters-section" style="margin-bottom: 15px;">
+                    <details class="filters-details">
+                        <summary style="cursor: pointer; font-weight: 600; padding: 8px 0;">🔍 Filtres avancés</summary>
+                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 15px;">
+                            <div class="form-group">
+                                <label for="filterCommerce">Commerce:</label>
+                                <select id="filterCommerce" onchange="loadPaiements()">
+                                    <option value="">Tous les commerces</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filterInstitut">Institution:</label>
+                                <select id="filterInstitut" onchange="loadPaiements()">
+                                    <option value="">Toutes les institutions</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filterTaxe">Taxe:</label>
+                                <select id="filterTaxe" onchange="loadPaiements()">
+                                    <option value="">Toutes les taxes</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filterMois">Mois:</label>
+                                <select id="filterMois" onchange="loadPaiements()">
+                                    <option value="">Tous les mois</option>
+                                    <option value="1">Janvier</option>
+                                    <option value="2">Février</option>
+                                    <option value="3">Mars</option>
+                                    <option value="4">Avril</option>
+                                    <option value="5">Mai</option>
+                                    <option value="6">Juin</option>
+                                    <option value="7">Juillet</option>
+                                    <option value="8">Août</option>
+                                    <option value="9">Septembre</option>
+                                    <option value="10">Octobre</option>
+                                    <option value="11">Novembre</option>
+                                    <option value="12">Décembre</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filterAnnee">Année:</label>
+                                <input type="number" id="filterAnnee" min="2020" max="2100" placeholder="Année" onchange="loadPaiements()">
+                            </div>
+                            <div class="form-group" id="filterStatutGroup">
+                                <label for="filterStatut">Statut:</label>
+                                <select id="filterStatut" onchange="loadPaiements()">
+                                    <option value="tous">Tous</option>
+                                    <option value="confirme">Encaissé</option>
+                                    <option value="en_attente">En attente</option>
+                                    <option value="annule">Annulé</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: flex-end;">
+                                <button onclick="resetFilters()" class="btn btn-secondary">🔄 Réinitialiser</button>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div id="statsEnAttente" style="margin-bottom: 15px;">
+                    <strong><span id="totalEnAttenteTab">0</span> taxe(s) non payée(s) / en retard</strong>
+                </div>
+                <div id="statsTous" style="margin-bottom: 15px; display: none; flex-wrap: wrap; gap: 24px;">
+                    <strong>Total: <span id="totalPaiements">0</span> paiement(s)</strong>
+                    <strong>Montant total: <span id="totalMontant">0</span> FCFA</strong>
+                    <strong>Encaissés: <span id="totalEncaisses">0</span> | En attente: <span id="totalEnAttente">0</span> | Annulés: <span id="totalAnnules">0</span></strong>
+                </div>
+                <div class="table-container">
+                    <table id="paiementsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Commerce</th>
+                                <th>Institution</th>
+                                <th>Taxe</th>
+                                <th>Montant</th>
+                                <th>Méthode</th>
+                                <th>Référence</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paiementsTableBody">
+                            <tr><td colspan="9" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Nouveau/Modifier Paiement -->
+    <div id="paiementModal" class="modal">
+        <div class="modal-overlay" onclick="closePaiementModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="formTitle">➕ Nouveau Paiement</h2>
+                <button type="button" class="modal-close" onclick="closePaiementModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <form id="paiementForm" class="boutique-form" onsubmit="savePaiement(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="paiementCommerce">Commerce *:</label>
+                        <select id="paiementCommerce" required>
+                            <option value="">Sélectionner un commerce</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementInstitut">Institution *:</label>
+                        <select id="paiementInstitut" required onchange="loadTaxesForPaiement()">
+                            <option value="">Sélectionner une institution</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementTaxe">Taxe (optionnel):</label>
+                        <select id="paiementTaxe">
+                            <option value="">Aucune taxe spécifique</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementMontant">Montant (FCFA) *:</label>
+                        <input type="number" id="paiementMontant" step="0.01" min="0.01" required placeholder="5000">
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementMois">Mois *:</label>
+                        <select id="paiementMois" required>
+                            <option value="1">Janvier</option>
+                            <option value="2">Février</option>
+                            <option value="3">Mars</option>
+                            <option value="4">Avril</option>
+                            <option value="5">Mai</option>
+                            <option value="6">Juin</option>
+                            <option value="7">Juillet</option>
+                            <option value="8">Août</option>
+                            <option value="9">Septembre</option>
+                            <option value="10">Octobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Décembre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementAnnee">Année *:</label>
+                        <input type="number" id="paiementAnnee" min="2020" max="2100" required value="2025">
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementMethode">Méthode de paiement *:</label>
+                        <select id="paiementMethode" required>
+                            <option value="ESPECE">Espèce</option>
+                            <option value="MANUEL">Manuel</option>
+                            <option value="USSD">USSD</option>
+                            <option value="MTN_MONEY">MTN Money</option>
+                            <option value="AIRTEL_MONEY">Airtel Money</option>
+                            <option value="CHEQUE">Chèque</option>
+                            <option value="VIREMENT">Virement</option>
+                            <option value="AUTRE">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementReference">Référence transaction:</label>
+                        <input type="text" id="paiementReference" placeholder="Auto-générée si vide">
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementTelephone">Numéro de téléphone:</label>
+                        <input type="text" id="paiementTelephone" placeholder="+237 6XX XXX XXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="paiementStatut">Statut *:</label>
+                        <select id="paiementStatut" required>
+                            <option value="confirme">Confirmé</option>
+                            <option value="en_attente">En attente</option>
+                            <option value="annule">Annulé</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="paiementNotes">Notes:</label>
+                        <textarea id="paiementNotes" rows="3" placeholder="Notes additionnelles sur ce paiement"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closePaiementModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">💾 Enregistrer le Paiement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Encaisser un paiement (taxe non payée) -->
+    <div id="encaisserModal" class="modal">
+        <div class="modal-overlay" onclick="closeEncaisserModal()"></div>
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--congo-green) 0%, var(--congo-green-dark) 100%); color: white;">
+                <h2 style="color: white !important; margin: 0;">💵 Encaisser le paiement</h2>
+                <button type="button" class="modal-close" onclick="closeEncaisserModal()" style="background: rgba(255,255,255,0.2); color: white;">&times;</button>
+            </div>
+            <form id="encaisserForm" onsubmit="encaisserPaiement(event)" style="padding: 24px;">
+                <input type="hidden" id="encaisserPaiementId">
+                <input type="hidden" id="encaisserBoutiqueId">
+                <input type="hidden" id="encaisserTaxeId">
+                <input type="hidden" id="encaisserInstitutId">
+                <input type="hidden" id="encaisserMontant">
+                <input type="hidden" id="encaisserMois">
+                <input type="hidden" id="encaisserAnnee">
+                <div id="encaisserResume" class="encaisser-resume" style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 12px;"></div>
+                <div class="form-group">
+                    <label for="encaisserMethode">Méthode d'encaissement *</label>
+                    <select id="encaisserMethode" required>
+                        <option value="ESPECE">Espèce</option>
+                        <option value="MANUEL">Manuel</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="encaisserReference">Référence (optionnel)</label>
+                    <input type="text" id="encaisserReference" placeholder="Ex: reçu n°123">
+                </div>
+                <div class="modal-footer" style="margin-top: 20px; padding: 0; border: none;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEncaisserModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">💵 Encaisser</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let editingPaiementId = null;
+        let allPaiements = [];
+        let currentTab = 'en_attente';
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabEnAttente').classList.toggle('active', tab === 'en_attente');
+            document.getElementById('tabTous').classList.toggle('active', tab === 'tous');
+            document.getElementById('statsEnAttente').style.display = tab === 'en_attente' ? 'block' : 'none';
+            document.getElementById('statsTous').style.display = tab === 'tous' ? 'flex' : 'none';
+            document.getElementById('filterStatutGroup').style.display = tab === 'tous' ? 'block' : 'none';
+            document.getElementById('periodeEnAttente').style.display = tab === 'en_attente' ? 'flex' : 'none';
+            loadPaiements();
+        }
+
+        // Initialiser la page
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('paiementAnnee').value = currentYear;
+            document.getElementById('paiementMois').value = currentMonth;
+            document.getElementById('periodeMoisEnAttente').value = currentMonth;
+            document.getElementById('periodeAnneeEnAttente').value = currentYear;
+            await loadCommerces();
+            await loadInstituts();
+            await loadTaxesForFilter();
+            switchTab('en_attente');
+        });
+
+        // Charger les commerces
+        async function loadCommerces() {
+            try {
+                const response = await fetch('/api/boutiques');
+                const commerces = await response.json();
+                
+                const selectCommerce = document.getElementById('paiementCommerce');
+                const filterCommerce = document.getElementById('filterCommerce');
+                
+                [selectCommerce, filterCommerce].forEach(select => {
+                    select.innerHTML = select === selectCommerce 
+                        ? '<option value="">Sélectionner un commerce</option>'
+                        : '<option value="">Tous les commerces</option>';
+                    
+                    (Array.isArray(commerces) ? commerces : []).forEach(c => {
+                        const option = document.createElement('option');
+                        option.value = c.id;
+                        option.textContent = `${c.code_unique} - ${c.nom}`;
+                        select.appendChild(option);
+                    });
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des commerces:', error);
+            }
+        }
+
+        // Charger les institutions
+        async function loadInstituts() {
+            try {
+                const response = await fetch('/api/instituts');
+                const instituts = await response.json();
+                
+                const selectInstitut = document.getElementById('paiementInstitut');
+                const filterInstitut = document.getElementById('filterInstitut');
+                
+                [selectInstitut, filterInstitut].forEach(select => {
+                    select.innerHTML = select === selectInstitut
+                        ? '<option value="">Sélectionner une institution</option>'
+                        : '<option value="">Toutes les institutions</option>';
+                    
+                    (Array.isArray(instituts) ? instituts : []).filter(i => i.active).forEach(i => {
+                        const option = document.createElement('option');
+                        option.value = i.id;
+                        option.textContent = i.nom;
+                        select.appendChild(option);
+                    });
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des institutions:', error);
+            }
+        }
+
+        // Charger les taxes pour le filtre
+        async function loadTaxesForFilter() {
+            try {
+                const response = await fetch('/api/taxes');
+                const taxes = await response.json();
+                const filterTaxe = document.getElementById('filterTaxe');
+                filterTaxe.innerHTML = '<option value="">Toutes les taxes</option>';
+                (Array.isArray(taxes) ? taxes : []).filter(t => t.active).forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.id;
+                    option.textContent = `${t.nom} (${t.institut_nom || ''})`;
+                    filterTaxe.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des taxes:', error);
+            }
+        }
+
+        // Charger les taxes pour le formulaire (selon institution)
+        async function loadTaxesForPaiement() {
+            const institutId = document.getElementById('paiementInstitut').value;
+            const selectTaxe = document.getElementById('paiementTaxe');
+            
+            selectTaxe.innerHTML = '<option value="">Aucune taxe spécifique</option>';
+            
+            if (!institutId) return;
+            
+            try {
+                const response = await fetch(`/api/taxes?institut_id=${institutId}`);
+                const taxes = await response.json();
+                (Array.isArray(taxes) ? taxes : []).filter(t => t.active).forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.id;
+                    option.textContent = `${t.nom} (${t.code}) - ${t.montant_attendu.toLocaleString('fr-FR')} FCFA`;
+                    selectTaxe.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des taxes:', error);
+            }
+        }
+
+        // Charger les paiements ou taxes non payées
+        async function loadPaiements() {
+            try {
+                if (currentTab === 'en_attente') {
+                    const params = new URLSearchParams();
+                    const mois = document.getElementById('periodeMoisEnAttente').value;
+                    const annee = document.getElementById('periodeAnneeEnAttente').value;
+                    const search = (document.getElementById('searchPaiement').value || '').trim();
+                    const boutiqueId = document.getElementById('filterCommerce').value;
+                    const institutId = document.getElementById('filterInstitut').value;
+                    const taxeId = document.getElementById('filterTaxe').value;
+                    params.append('mois', mois);
+                    params.append('annee', annee);
+                    if (search) params.append('search', search);
+                    if (boutiqueId) params.append('boutique_id', boutiqueId);
+                    if (institutId) params.append('institut_id', institutId);
+                    if (taxeId) params.append('taxe_id', taxeId);
+                    const response = await fetch(`/api/taxes-non-payees?${params.toString()}`);
+                    if (!response.ok) throw new Error('Erreur lors du chargement');
+                    allPaiements = await response.json();
+                    displayTaxesNonPayees(allPaiements);
+                } else {
+                    const params = new URLSearchParams();
+                    const search = (document.getElementById('searchPaiement').value || '').trim();
+                    const boutiqueId = document.getElementById('filterCommerce').value;
+                    const institutId = document.getElementById('filterInstitut').value;
+                    const taxeId = document.getElementById('filterTaxe').value;
+                    const mois = document.getElementById('filterMois').value;
+                    const annee = document.getElementById('filterAnnee').value;
+                    let statut = document.getElementById('filterStatut').value;
+                    if (!statut || statut === 'tous') statut = '';
+                    if (search) params.append('search', search);
+                    if (boutiqueId) params.append('boutique_id', boutiqueId);
+                    if (institutId) params.append('institut_id', institutId);
+                    if (taxeId) params.append('taxe_id', taxeId);
+                    if (mois) params.append('mois', mois);
+                    if (annee) params.append('annee', annee);
+                    if (statut) params.append('statut', statut);
+                    const response = await fetch(`/api/paiements?${params.toString()}`);
+                    if (!response.ok) throw new Error('Erreur lors du chargement');
+                    allPaiements = await response.json();
+                    displayPaiements(allPaiements);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                allPaiements = [];
+                document.getElementById('paiementsTableBody').innerHTML = 
+                    `<tr><td colspan="9" class="error">Erreur: ${error.message}</td></tr>`;
+                document.getElementById('searchCount').textContent = '';
+            }
+        }
+
+        // Recherche avec debounce
+        let searchTimeout;
+        function debouncedSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadPaiements, 300);
+        }
+
+        const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+        // Afficher les taxes non payées (onglet en attente)
+        function displayTaxesNonPayees(items) {
+            const tbody = document.getElementById('paiementsTableBody');
+            const thead = document.querySelector('#paiementsTable thead tr');
+            thead.innerHTML = '<th>Commerce</th><th>Institution</th><th>Taxe</th><th>Montant dû</th><th>Période</th><th>Statut</th><th>Actions</th>';
+            const countEl = document.getElementById('searchCount');
+            if (items.length > 0) {
+                countEl.textContent = `${items.length} taxe(s) non payée(s)`;
+            } else countEl.textContent = '';
+            document.getElementById('totalEnAttenteTab').textContent = items.length;
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">Aucune taxe non payée pour cette période</td></tr>';
+                return;
+            }
+            tbody.innerHTML = items.map((item) => {
+                const periode = `${moisNoms[item.mois - 1]} ${item.annee}`;
+                const dataB64 = btoa(unescape(encodeURIComponent(JSON.stringify(item))));
+                return `
+                    <tr data-item="${dataB64}">
+                        <td><strong>${item.boutique_code || ''}</strong><br><small>${item.boutique_nom || ''}</small></td>
+                        <td>${item.institut_nom || ''}</td>
+                        <td>${item.taxe_nom || ''}<br><small>${item.taxe_code || ''}</small></td>
+                        <td><strong>${item.montant_attendu.toLocaleString('fr-FR')} FCFA</strong></td>
+                        <td>${periode}</td>
+                        <td><span class="warning">⚠️ Non payé</span></td>
+                        <td>
+                            <button onclick="encaisserFromRow(this)" class="btn-small btn-encaisser" title="Encaisser un paiement">💵 Encaisser</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Afficher les paiements
+        function displayPaiements(paiements) {
+            const thead = document.querySelector('#paiementsTable thead tr');
+            thead.innerHTML = '<th>Date</th><th>N° Transaction</th><th>Commerce</th><th>Institution</th><th>Taxe</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Actions</th>';
+            const tbody = document.getElementById('paiementsTableBody');
+            const total = allPaiements.length;
+            const countEl = document.getElementById('searchCount');
+            
+            if (total > 0) {
+                countEl.textContent = paiements.length === total 
+                    ? `${total} paiement${total > 1 ? 's' : ''}` 
+                    : `${paiements.length} / ${total} paiement${total > 1 ? 's' : ''}`;
+            } else {
+                countEl.textContent = '';
+            }
+            
+            if (paiements.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data">' + 
+                    (currentTab === 'en_attente' ? 'Aucun paiement en attente' : 'Aucun paiement trouvé') + '</td></tr>';
+                document.getElementById('totalEnAttenteTab').textContent = '0';
+                document.getElementById('totalPaiements').textContent = '0';
+                document.getElementById('totalMontant').textContent = '0';
+                document.getElementById('totalEncaisses').textContent = '0';
+                document.getElementById('totalEnAttente').textContent = '0';
+                document.getElementById('totalAnnules').textContent = '0';
+                return;
+            }
+            
+            let totalMontant = 0, totalEncaisses = 0, totalEnAttente = 0, totalAnnules = 0;
+            tbody.innerHTML = paiements.map(p => {
+                if (p.statut === 'confirme') {
+                    totalMontant += p.montant;
+                    totalEncaisses++;
+                } else if (p.statut === 'en_attente') totalEnAttente++;
+                else totalAnnules++;
+                const date = p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR') : 'N/A';
+                const statutClass = p.statut === 'confirme' ? 'success' : p.statut === 'en_attente' ? 'warning' : 'error';
+                const statutText = p.statut === 'confirme' ? '✅ Encaissé' : p.statut === 'en_attente' ? '⏳ En attente' : '❌ Annulé';
+                
+                return `
+                    <tr>
+                        <td>${date}</td>
+                        <td><strong>${p.numero_transaction || p.reference_transaction || 'N/A'}</strong></td>
+                        <td><strong>${p.boutique_code || 'N/A'}</strong><br><small>${p.boutique_nom || ''}</small></td>
+                        <td>${p.institut_nom || 'N/A'}</td>
+                        <td>${p.taxe_nom || 'Aucune'}<br><small>${p.taxe_code || ''}</small></td>
+                        <td><strong>${p.montant.toLocaleString('fr-FR')} FCFA</strong></td>
+                        <td>${p.methode || 'N/A'}</td>
+                        <td><span class="${statutClass}">${statutText}</span></td>
+                        <td>
+                            <a href="/paiements/${p.id}/receipt" target="_blank" class="btn-small" title="Imprimer le reçu" style="text-decoration: none; display: inline-block;">🖨️ Reçu</a>
+                            ${p.statut === 'en_attente' 
+                                ? `<button onclick="openEncaisserModal(${p.id})" class="btn-small btn-encaisser" title="Encaisser">💵 Encaisser</button>` 
+                                : ''}
+                            <button onclick="editPaiement(${p.id})" class="btn-small" title="Modifier">✏️</button>
+                            ${p.statut !== 'annule' ? `<button onclick="annulerPaiement(${p.id})" class="btn-small" title="Annuler" style="background: #f44336;">❌</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('totalEnAttenteTab').textContent = paiements.length;
+            document.getElementById('totalPaiements').textContent = paiements.length;
+            document.getElementById('totalMontant').textContent = totalMontant.toLocaleString('fr-FR');
+            document.getElementById('totalEncaisses').textContent = totalEncaisses;
+            document.getElementById('totalEnAttente').textContent = totalEnAttente;
+            document.getElementById('totalAnnules').textContent = totalAnnules;
+        }
+
+        // Enregistrer un paiement
+        async function savePaiement(event) {
+            event.preventDefault();
+            
+            const data = {
+                boutique_id: parseInt(document.getElementById('paiementCommerce').value),
+                institut_id: parseInt(document.getElementById('paiementInstitut').value),
+                taxe_id: document.getElementById('paiementTaxe').value ? parseInt(document.getElementById('paiementTaxe').value) : null,
+                montant: parseFloat(document.getElementById('paiementMontant').value),
+                mois: parseInt(document.getElementById('paiementMois').value),
+                annee: parseInt(document.getElementById('paiementAnnee').value),
+                methode: document.getElementById('paiementMethode').value,
+                reference_transaction: document.getElementById('paiementReference').value || undefined,
+                numero_telephone: document.getElementById('paiementTelephone').value || undefined,
+                statut: document.getElementById('paiementStatut').value,
+                notes: document.getElementById('paiementNotes').value || undefined
+            };
+            
+            try {
+                const url = editingPaiementId ? `/api/paiements/${editingPaiementId}` : '/api/paiements';
+                const method = editingPaiementId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erreur lors de l\'enregistrement');
+                }
+                
+                alert(editingPaiementId ? 'Paiement modifié avec succès !' : 'Paiement créé avec succès !');
+                closePaiementModal();
+                resetForm();
+                loadPaiements();
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Modifier un paiement
+        async function editPaiement(paiementId) {
+            try {
+                const response = await fetch(`/api/paiements/${paiementId}`);
+                if (!response.ok) throw new Error('Paiement non trouvé');
+                const paiement = await response.json();
+                await fillFormForEdit(paiement);
+                openPaiementModal();
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function fillFormForEdit(paiement) {
+            editingPaiementId = paiement.id;
+            document.getElementById('paiementCommerce').value = paiement.boutique_id;
+            document.getElementById('paiementInstitut').value = paiement.institut_id;
+            await loadTaxesForPaiement();
+            document.getElementById('paiementTaxe').value = paiement.taxe_id || '';
+            document.getElementById('paiementMontant').value = paiement.montant;
+            document.getElementById('paiementMois').value = paiement.mois;
+            document.getElementById('paiementAnnee').value = paiement.annee;
+            document.getElementById('paiementMethode').value = paiement.methode || 'AUTRE';
+            document.getElementById('paiementReference').value = paiement.reference_transaction || '';
+            document.getElementById('paiementTelephone').value = paiement.numero_telephone || '';
+            document.getElementById('paiementStatut').value = paiement.statut;
+            document.getElementById('paiementNotes').value = paiement.notes || '';
+            document.getElementById('formTitle').textContent = '✏️ Modifier le Paiement';
+            document.getElementById('submitBtn').textContent = '💾 Enregistrer les Modifications';
+        }
+
+        // Annuler un paiement
+        async function annulerPaiement(paiementId) {
+            if (!confirm('Êtes-vous sûr de vouloir annuler ce paiement ?')) return;
+            
+            try {
+                const response = await fetch(`/api/paiements/${paiementId}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erreur lors de l\'annulation');
+                }
+                alert('Paiement annulé avec succès !');
+                loadPaiements();
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Réinitialiser le formulaire
+        function resetForm() {
+            editingPaiementId = null;
+            document.getElementById('paiementForm').reset();
+            document.getElementById('paiementAnnee').value = currentYear;
+            document.getElementById('paiementMois').value = currentMonth;
+            document.getElementById('paiementStatut').value = 'confirme';
+            document.getElementById('paiementTaxe').innerHTML = '<option value="">Aucune taxe spécifique</option>';
+            document.getElementById('formTitle').textContent = '➕ Nouveau Paiement';
+            document.getElementById('submitBtn').textContent = '💾 Enregistrer le Paiement';
+        }
+
+        // Réinitialiser les filtres
+        function resetFilters() {
+            document.getElementById('searchPaiement').value = '';
+            document.getElementById('filterCommerce').value = '';
+            document.getElementById('filterInstitut').value = '';
+            document.getElementById('filterTaxe').value = '';
+            document.getElementById('filterMois').value = '';
+            document.getElementById('filterAnnee').value = '';
+            document.getElementById('filterStatut').value = 'tous';
+            loadPaiements();
+        }
+
+        // Modal
+        function openPaiementModal() {
+            if (!editingPaiementId) resetForm();
+            document.getElementById('paiementModal').classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        async function openEncaisserModal(paiementId) {
+            try {
+                const response = await fetch(`/api/paiements/${paiementId}`);
+                if (!response.ok) throw new Error('Paiement non trouvé');
+                const p = await response.json();
+                document.getElementById('encaisserPaiementId').value = p.id;
+                document.getElementById('encaisserBoutiqueId').value = '';
+                document.getElementById('encaisserTaxeId').value = '';
+                document.getElementById('encaisserResume').innerHTML = `
+                    <strong>${p.boutique_code || ''} - ${p.boutique_nom || ''}</strong><br>
+                    <span>${p.institut_nom || ''} / ${p.taxe_nom || 'Taxe'}</span><br>
+                    <strong style="font-size: 1.2em; color: var(--congo-green);">${new Intl.NumberFormat('fr-FR').format(p.montant)} FCFA</strong>
+                `;
+                document.getElementById('encaisserMethode').value = 'ESPECE';
+                document.getElementById('encaisserReference').value = '';
+                document.getElementById('encaisserModal').classList.add('modal-open');
+                document.body.style.overflow = 'hidden';
+            } catch (err) {
+                alert('Erreur: ' + err.message);
+            }
+        }
+
+        function encaisserFromRow(btn) {
+            const row = btn.closest('tr');
+            if (!row) return;
+            try {
+                const item = JSON.parse(decodeURIComponent(escape(atob(row.dataset.item))));
+                openEncaisserModalFromTax(item);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function openEncaisserModalFromTax(item) {
+            document.getElementById('encaisserPaiementId').value = '';
+            document.getElementById('encaisserBoutiqueId').value = item.boutique_id;
+            document.getElementById('encaisserTaxeId').value = item.taxe_id;
+            document.getElementById('encaisserInstitutId').value = item.institut_id;
+            document.getElementById('encaisserMontant').value = item.montant_attendu;
+            document.getElementById('encaisserMois').value = item.mois;
+            document.getElementById('encaisserAnnee').value = item.annee;
+            document.getElementById('encaisserResume').innerHTML = `
+                <strong>${item.boutique_code || ''} - ${item.boutique_nom || ''}</strong><br>
+                <span>${item.institut_nom || ''} / ${item.taxe_nom || 'Taxe'}</span><br>
+                <strong style="font-size: 1.2em; color: var(--congo-green);">${new Intl.NumberFormat('fr-FR').format(item.montant_attendu)} FCFA</strong>
+            `;
+            document.getElementById('encaisserMethode').value = 'ESPECE';
+            document.getElementById('encaisserReference').value = '';
+            document.getElementById('encaisserModal').classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEncaisserModal() {
+            document.getElementById('encaisserModal').classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }
+
+        async function encaisserPaiement(event) {
+            event.preventDefault();
+            const paiementId = document.getElementById('encaisserPaiementId').value;
+            const boutiqueId = document.getElementById('encaisserBoutiqueId').value;
+            const methode = document.getElementById('encaisserMethode').value;
+            const ref = document.getElementById('encaisserReference').value.trim();
+            try {
+                if (paiementId) {
+                    const data = { statut: 'confirme', methode };
+                    if (ref) data.reference_transaction = ref;
+                    const response = await fetch(`/api/paiements/${paiementId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Erreur');
+                    }
+                } else if (boutiqueId) {
+                    const data = {
+                        boutique_id: parseInt(boutiqueId),
+                        institut_id: parseInt(document.getElementById('encaisserInstitutId').value),
+                        taxe_id: parseInt(document.getElementById('encaisserTaxeId').value),
+                        montant: parseFloat(document.getElementById('encaisserMontant').value),
+                        mois: parseInt(document.getElementById('encaisserMois').value),
+                        annee: parseInt(document.getElementById('encaisserAnnee').value),
+                        methode,
+                        reference_transaction: ref || undefined,
+                        statut: 'confirme'
+                    };
+                    const response = await fetch('/api/paiements', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Erreur');
+                    }
+                }
+                alert('Paiement encaissé avec succès !');
+                closeEncaisserModal();
+                loadPaiements();
+            } catch (err) {
+                alert('Erreur: ' + err.message);
+            }
+        }
+
+        function closePaiementModal() {
+            document.getElementById('paiementModal').classList.remove('modal-open');
+            document.body.style.overflow = '';
+            resetForm();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePaiementModal();
+                closeEncaisserModal();
+            }
+        });
+    </script>
+</body>
+</html>

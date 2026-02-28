@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon espace - Espace Commerçant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="commercant-header">
+            <div>
+                <h1>🏪 Mon Commerce</h1>
+                <p id="commerceInfo">Chargement...</p>
+            </div>
+            <a href="{{ url_for('commercant_deconnexion') }}" class="btn btn-secondary">Déconnexion</a>
+        </header>
+
+        <main>
+            <section class="commercant-stats">
+                <h2>Résumé</h2>
+                <div class="stats-grid">
+                    <div class="stat-card" id="statStatut">
+                        <div class="stat-value" id="statutValue">-</div>
+                        <div class="stat-label">Statut ce mois</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-value" id="totalPaiements">0</div>
+                        <div class="stat-label">Total paiements</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalMontant">0</div>
+                        <div class="stat-label">Total payé (FCFA)</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="taxes-a-payer-section">
+                <h2>💳 Payer mes taxes</h2>
+                <div class="taxes-selector">
+                    <label>Période :</label>
+                    <select id="periodeMois" onchange="loadTaxesAPayer()">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                    <select id="periodeAnnee" onchange="loadTaxesAPayer()"></select>
+                </div>
+                <div id="taxesAPayerList" class="taxes-a-payer-grid">
+                    <div class="loading">Chargement des taxes...</div>
+                </div>
+                <div id="toutesTaxesPayees" class="toutes-payees" style="display: none;">
+                    ✅ Toutes vos taxes sont à jour pour cette période.
+                </div>
+            </section>
+
+            <section>
+                <h2>Historique des paiements</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>N° Transaction</th>
+                                <th>Institution</th>
+                                <th>Taxe</th>
+                                <th>Montant</th>
+                                <th>Méthode</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paiementsTableBody">
+                            <tr>
+                                <td colspan="8" class="loading">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noPaiements" class="no-data" style="display: none;">
+                    Aucun paiement enregistré pour le moment.
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Paiement -->
+    <div id="paiementModal" class="modal modal-paiement">
+        <div class="modal-overlay" onclick="closePaiementModal()"></div>
+        <div class="modal-content modal-paiement-content">
+            <div class="modal-header modal-paiement-header">
+                <h2>💳 Effectuer un paiement</h2>
+                <button type="button" class="modal-close" onclick="closePaiementModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <form id="paiementForm" class="modal-paiement-form">
+                <input type="hidden" id="payTaxeId" name="taxe_id">
+                <input type="hidden" id="payMontant" name="montant">
+                
+                <div class="paiement-summary">
+                    <div class="paiement-summary-item">
+                        <span class="paiement-summary-label">Taxe</span>
+                        <span id="payTaxeNom" class="paiement-summary-value"></span>
+                    </div>
+                    <div class="paiement-summary-amount">
+                        <span class="paiement-summary-label">Montant à payer</span>
+                        <span id="payMontantAffichage" class="paiement-summary-montant"></span>
+                    </div>
+                </div>
+
+                <div class="payment-instructions" id="paymentInstructions">
+                    <div class="payment-instructions-header">
+                        <span class="payment-instructions-icon">📱</span>
+                        <h4>Comment payer</h4>
+                    </div>
+                    <div class="simulation-banner">
+                        <span class="simulation-label">🧪 Mode test</span>
+                        <p>Les paiements USSD et Mobile Money seront bientôt disponibles. En attendant, utilisez le bouton ci-dessous pour simuler un paiement.</p>
+                        <button type="button" class="btn btn-simulation" onclick="simulerPaiement()">
+                            🧪 Simuler le paiement
+                        </button>
+                    </div>
+                    <div class="payment-methods">
+                        <div class="payment-method-item">
+                            <span class="payment-method-label">USSD</span>
+                            <div class="payment-method-value">
+                                <code id="ussdCode"></code>
+                                <button type="button" class="btn-copy" onclick="copyToClipboard('ussdCode')" title="Copier">📋</button>
+                            </div>
+                            <span class="payment-method-hint">Composez ce code sur votre téléphone</span>
+                        </div>
+                        <div class="payment-method-item">
+                            <span class="payment-method-label">Mobile Money</span>
+                            <div class="payment-method-value">
+                                <code id="refCode"></code>
+                                <button type="button" class="btn-copy" onclick="copyToClipboard('refCode')" title="Copier">📋</button>
+                            </div>
+                            <span class="payment-method-hint">Référence à indiquer lors du virement vers IMPOTS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="paiement-form-section">
+                    <h4 class="form-section-title">Enregistrer votre paiement</h4>
+                    <p class="form-section-desc">Après avoir effectué le paiement, renseignez les informations ci-dessous.</p>
+                    <div class="form-group">
+                        <label for="payMethode">Méthode de paiement *</label>
+                        <select id="payMethode" name="methode" required>
+                            <option value="MOBILE_MONEY">Mobile Money (MTN/Airtel)</option>
+                            <option value="USSD">USSD</option>
+                            <option value="ESPECE">Espèces</option>
+                            <option value="AUTRE">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="payReference">Référence de transaction</label>
+                        <input type="text" id="payReference" name="reference_transaction" 
+                               placeholder="Ex: numéro reçu par SMS après paiement">
+                    </div>
+                    <div class="form-group">
+                        <label for="payTelephone">Numéro de téléphone</label>
+                        <input type="tel" id="payTelephone" name="numero_telephone" 
+                               placeholder="+237 6XX XXX XXX">
+                    </div>
+                </div>
+                
+                <div id="payError" class="auth-error" style="display: none;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closePaiementModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer le paiement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+        async function loadCommerce() {
+            try {
+                const response = await fetch('/api/commercant/mon-commerce');
+                if (!response.ok) throw new Error('Erreur');
+                const data = await response.json();
+                
+                document.getElementById('commerceInfo').textContent = 
+                    `${data.nom} (${data.code_unique}) - ${data.proprietaire || 'Propriétaire'}`;
+                
+                const statutCard = document.getElementById('statStatut');
+                const statutValue = document.getElementById('statutValue');
+                if (data.a_jour) {
+                    statutCard.className = 'stat-card success';
+                    statutValue.textContent = '✅ À jour';
+                } else {
+                    statutCard.className = 'stat-card warning';
+                    statutValue.textContent = '❌ Non à jour';
+                }
+            } catch (e) {
+                document.getElementById('commerceInfo').textContent = 'Erreur de chargement';
+            }
+        }
+
+        async function loadPaiements() {
+            try {
+                const response = await fetch('/api/commercant/mes-paiements');
+                if (!response.ok) throw new Error('Session expirée');
+                const paiements = await response.json();
+                
+                const tbody = document.getElementById('paiementsTableBody');
+                if (!tbody) return;
+                
+                tbody.innerHTML = '';
+                
+                if (paiements.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="no-data">Aucun paiement enregistré</td></tr>';
+                    document.getElementById('noPaiements').style.display = 'block';
+                } else {
+                    document.getElementById('noPaiements').style.display = 'none';
+                    let totalMontant = 0;
+                    
+                    paiements.forEach(p => {
+                        totalMontant += p.montant || 0;
+                        const date = p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR', {
+                            day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        }) : '-';
+                        const statutClass = p.statut === 'confirme' ? 'status-success' : p.statut === 'annule' ? 'status-warning' : '';
+                        const statutText = p.statut === 'confirme' ? '✅ Confirmé' : p.statut === 'annule' ? '❌ Annulé' : '⏳ En attente';
+                        const numTxn = p.numero_transaction || p.reference_transaction || '-';
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${date}</td>
+                            <td><strong>${numTxn}</strong></td>
+                            <td>${p.institut_nom || '-'}</td>
+                            <td>${p.taxe_nom || '-'}</td>
+                            <td><strong>${new Intl.NumberFormat('fr-FR').format(p.montant)} FCFA</strong></td>
+                            <td>${p.methode || '-'}</td>
+                            <td class="${statutClass}">${statutText}</td>
+                            <td><a href="/commercant/receipt/${p.id}" target="_blank" class="btn-small" title="Imprimer le reçu" style="text-decoration: none;">🖨️ Reçu</a></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    document.getElementById('totalPaiements').textContent = paiements.length;
+                    document.getElementById('totalMontant').textContent = new Intl.NumberFormat('fr-FR').format(totalMontant);
+                }
+            } catch (e) {
+                document.getElementById('paiementsTableBody').innerHTML = 
+                    '<tr><td colspan="8" class="error">Erreur de chargement. <a href="/commercant/connexion">Reconnectez-vous</a></td></tr>';
+            }
+        }
+
+        let taxesData = { taxes: [], code_boutique: '', code_ussd: '*123#' };
+
+        async function loadTaxesAPayer() {
+            const mois = document.getElementById('periodeMois').value;
+            const annee = document.getElementById('periodeAnnee').value;
+            const container = document.getElementById('taxesAPayerList');
+            const toutesPayees = document.getElementById('toutesTaxesPayees');
+
+            try {
+                const response = await fetch(`/api/commercant/mes-taxes-a-payer?mois=${mois}&annee=${annee}`);
+                if (!response.ok) throw new Error('Erreur');
+                const data = await response.json();
+                taxesData = data;
+
+                container.innerHTML = '';
+                toutesPayees.style.display = 'none';
+
+                const taxesNonPayees = data.taxes.filter(t => !t.payee);
+                if (taxesNonPayees.length === 0) {
+                    if (data.taxes.length === 0) {
+                        container.innerHTML = '<div class="no-data">Aucune taxe configurée pour votre commerce.</div>';
+                    } else {
+                        toutesPayees.style.display = 'block';
+                    }
+                } else {
+                    taxesNonPayees.forEach(t => {
+                        const card = document.createElement('div');
+                        card.className = 'taxe-a-payer-card';
+                        card.innerHTML = `
+                            <div class="taxe-card-header">
+                                <strong>${t.taxe.nom}</strong>
+                                <span class="taxe-institut">${t.institut_nom}</span>
+                            </div>
+                            <div class="taxe-card-montant">${new Intl.NumberFormat('fr-FR').format(t.montant_attendu)} FCFA</div>
+                            <button type="button" class="btn btn-primary btn-block" onclick="openPaiementModal(${t.taxe_id}, ${t.montant_attendu}, '${t.taxe.nom.replace(/'/g, "\\'")}')">
+                                💳 Payer
+                            </button>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="error">Erreur de chargement</div>';
+            }
+        }
+
+        function openPaiementModal(taxeId, montant, taxeNom) {
+            document.getElementById('payTaxeId').value = taxeId;
+            document.getElementById('payMontant').value = montant;
+            document.getElementById('payTaxeNom').textContent = taxeNom;
+            document.getElementById('payMontantAffichage').textContent = new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+            const ussdBase = (taxesData.code_ussd || '*123#').replace('#', '');
+            document.getElementById('ussdCode').textContent = `${ussdBase}*${taxesData.code_boutique || ''}*${montant}#`;
+            document.getElementById('refCode').textContent = taxesData.code_boutique || '-';
+            document.getElementById('payReference').value = '';
+            document.getElementById('payTelephone').value = '';
+            document.getElementById('payError').style.display = 'none';
+            document.getElementById('paiementModal').classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePaiementModal() {
+            document.getElementById('paiementModal').classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('paiementForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('payError');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/commercant/payer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        taxe_id: parseInt(document.getElementById('payTaxeId').value),
+                        montant: parseFloat(document.getElementById('payMontant').value),
+                        reference_transaction: document.getElementById('payReference').value.trim(),
+                        numero_telephone: document.getElementById('payTelephone').value.trim(),
+                        methode: document.getElementById('payMethode').value
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    closePaiementModal();
+                    loadTaxesAPayer();
+                    loadCommerce();
+                    loadPaiements();
+                    alert('Paiement enregistré avec succès !');
+                } else {
+                    errorDiv.textContent = data.error || 'Erreur lors du paiement';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Erreur de connexion. Réessayez.';
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        async function simulerPaiement() {
+            const taxeId = document.getElementById('payTaxeId').value;
+            const montant = document.getElementById('payMontant').value;
+            if (!taxeId || !montant) return;
+            
+            const ref = 'SIM-' + Date.now();
+            try {
+                const response = await fetch('/api/commercant/payer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        taxe_id: parseInt(taxeId),
+                        montant: parseFloat(montant),
+                        reference_transaction: ref,
+                        numero_telephone: '',
+                        methode: 'SIMULATION'
+                    })
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    closePaiementModal();
+                    loadTaxesAPayer();
+                    loadCommerce();
+                    loadPaiements();
+                    alert('Paiement simulé avec succès !');
+                } else {
+                    alert(data.error || 'Erreur lors de la simulation');
+                }
+            } catch (err) {
+                alert('Erreur de connexion.');
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const el = document.getElementById(elementId);
+            const text = el.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = el.nextElementSibling;
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => btn.textContent = orig, 1500);
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePaiementModal();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            document.getElementById('periodeMois').value = now.getMonth() + 1;
+            const anneeSelect = document.getElementById('periodeAnnee');
+            for (let y = now.getFullYear(); y >= now.getFullYear() - 2; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                if (y === now.getFullYear()) opt.selected = true;
+                anneeSelect.appendChild(opt);
+            }
+            loadCommerce();
+            loadPaiements();
+            loadTaxesAPayer();
+        });
+    </script>
+</body>
+</html>

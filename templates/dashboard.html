@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord - Système de Paiement Fiscal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏛️ Système de Paiement Fiscal</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <section class="stats-section">
+                <h2>Statistiques du Mois</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalBoutiques">-</div>
+                        <div class="stat-label">Total Commerces</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-value" id="boutiquesAJour">-</div>
+                        <div class="stat-label">À Jour</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-value" id="boutiquesNonAJour">-</div>
+                        <div class="stat-label">Non À Jour</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-value" id="tauxPaiement">-</div>
+                        <div class="stat-label">Taux de Paiement</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalPaiements">-</div>
+                        <div class="stat-label">Total Collecté (FCFA)</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="balance-section">
+                <h2>💰 Balance par Institution</h2>
+                <div class="balance-controls">
+                    <label><strong>Mois:</strong></label>
+                    <select id="balanceMois" onchange="loadBalance()">
+                        <option value="1">Janvier</option>
+                        <option value="2">Février</option>
+                        <option value="3">Mars</option>
+                        <option value="4">Avril</option>
+                        <option value="5">Mai</option>
+                        <option value="6">Juin</option>
+                        <option value="7">Juillet</option>
+                        <option value="8">Août</option>
+                        <option value="9">Septembre</option>
+                        <option value="10">Octobre</option>
+                        <option value="11">Novembre</option>
+                        <option value="12">Décembre</option>
+                    </select>
+                    <label><strong>Année:</strong></label>
+                    <input type="number" id="balanceAnnee" value="2024" min="2020" max="2100" onchange="loadBalance()">
+                </div>
+                <div id="balanceGrid" class="balance-grid">
+                    <!-- Sera rempli dynamiquement -->
+                </div>
+            </section>
+
+            <section class="arrondissements-section">
+                <h2>Par Arrondissement</h2>
+                <div id="arrondissementsGrid" class="arrondissements-grid">
+                    <!-- Sera rempli dynamiquement -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Charger les statistiques
+        async function loadStatistiques() {
+            try {
+                const response = await fetch('/api/statistiques');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Vérifier si c'est une erreur
+                if (data.error) {
+                    console.error('Erreur API:', data.error);
+                    return;
+                }
+                
+                document.getElementById('totalBoutiques').textContent = data.total_boutiques || 0;
+                document.getElementById('boutiquesAJour').textContent = data.boutiques_a_jour || 0;
+                document.getElementById('boutiquesNonAJour').textContent = data.boutiques_non_a_jour || 0;
+                document.getElementById('tauxPaiement').textContent = (data.taux_paiement || 0) + '%';
+                document.getElementById('totalPaiements').textContent = new Intl.NumberFormat('fr-FR').format(data.total_paiements_mois || 0);
+                
+                // Afficher les statistiques par arrondissement
+                const arrGrid = document.getElementById('arrondissementsGrid');
+                arrGrid.innerHTML = '';
+                
+                if (data.par_arrondissement && typeof data.par_arrondissement === 'object') {
+                    for (const [arr, stats] of Object.entries(data.par_arrondissement)) {
+                        const card = document.createElement('div');
+                        card.className = 'arrondissement-card';
+                        const taux = stats.total > 0 ? Math.round((stats.a_jour / stats.total) * 100) : 0;
+                        card.innerHTML = `
+                            <h3>${arr}</h3>
+                            <div class="arr-stats">
+                                <div>Total: <strong>${stats.total}</strong></div>
+                                <div>À jour: <strong class="success">${stats.a_jour}</strong></div>
+                                <div>Non à jour: <strong class="warning">${stats.non_a_jour}</strong></div>
+                                <div>Taux: <strong>${taux}%</strong></div>
+                            </div>
+                        `;
+                        arrGrid.appendChild(card);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des statistiques:', error);
+            }
+        }
+
+        // Charger la balance par institution
+        async function loadBalance() {
+            try {
+                const mois = document.getElementById('balanceMois').value;
+                const annee = document.getElementById('balanceAnnee').value;
+                
+                const response = await fetch(`/api/balance-instituts?mois=${mois}&annee=${annee}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Erreur API:', data.error);
+                    return;
+                }
+                
+                const balanceGrid = document.getElementById('balanceGrid');
+                balanceGrid.innerHTML = '';
+                
+                if (data.balance_par_institut && data.balance_par_institut.length > 0) {
+                    // Afficher le résumé global
+                    const summaryCard = document.createElement('div');
+                    summaryCard.className = 'balance-summary-card';
+                    summaryCard.innerHTML = `
+                        <h3 style="margin-top: 0; color: white; margin-bottom: 15px; font-weight: 700;">📊 Résumé Global (${getMonthName(data.mois)} ${data.annee})</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+                            <div>
+                                <div style="font-size: 0.9em; opacity: 0.95;">Total Attendu</div>
+                                <div style="font-size: 1.8em; font-weight: 800;">${new Intl.NumberFormat('fr-FR').format(data.total_attendu)} FCFA</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.9em; opacity: 0.95;">Total Recouvré</div>
+                                <div style="font-size: 1.8em; font-weight: 800; color: #a5d6a7;">${new Intl.NumberFormat('fr-FR').format(data.total_recouvre)} FCFA</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.9em; opacity: 0.95;">Non Recouvré</div>
+                                <div style="font-size: 1.8em; font-weight: 800; color: #FBDE4A;">${new Intl.NumberFormat('fr-FR').format(data.total_non_recouvre)} FCFA</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.9em; opacity: 0.95;">Taux de Recouvrement</div>
+                                <div style="font-size: 1.8em; font-weight: 800;">
+                                    ${data.total_attendu > 0 ? Math.round((data.total_recouvre / data.total_attendu) * 100) : 0}%
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    balanceGrid.appendChild(summaryCard);
+                    
+                    // Afficher chaque institution
+                    data.balance_par_institut.forEach(balance => {
+                        const card = document.createElement('div');
+                        card.className = 'balance-card';
+                        const tauxClass = balance.taux_recouvrement >= 80 ? 'success' : balance.taux_recouvrement >= 50 ? 'warning' : 'danger';
+                        card.innerHTML = `
+                            <div class="balance-header">
+                                <h3>${balance.institut_nom}</h3>
+                                <span class="balance-code">${balance.institut_code}</span>
+                            </div>
+                            <div class="balance-stats">
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Montant Attendu:</span>
+                                    <span class="balance-value">${new Intl.NumberFormat('fr-FR').format(balance.montant_attendu)} FCFA</span>
+                                </div>
+                                <div class="balance-stat-item success">
+                                    <span class="balance-label">✅ Recouvré:</span>
+                                    <span class="balance-value">${new Intl.NumberFormat('fr-FR').format(balance.montant_recouvre)} FCFA</span>
+                                </div>
+                                <div class="balance-stat-item warning">
+                                    <span class="balance-label">❌ Non Recouvré:</span>
+                                    <span class="balance-value">${new Intl.NumberFormat('fr-FR').format(balance.montant_non_recouvre)} FCFA</span>
+                                </div>
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Taux de Recouvrement:</span>
+                                    <span class="balance-value ${tauxClass}">${balance.taux_recouvrement.toFixed(1)}%</span>
+                                </div>
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Commerces Actifs:</span>
+                                    <span class="balance-value">${balance.commerces_actifs}</span>
+                                </div>
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Commerces Ayant Payé:</span>
+                                    <span class="balance-value success">${balance.commerces_ayant_paye}</span>
+                                </div>
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Commerces N'ayant Pas Payé:</span>
+                                    <span class="balance-value warning">${balance.commerces_n_ayant_pas_paye}</span>
+                                </div>
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Nombre de Taxes:</span>
+                                    <span class="balance-value">${balance.nombre_taxes}</span>
+                                </div>
+                                <div class="balance-stat-item">
+                                    <span class="balance-label">Nombre de Paiements:</span>
+                                    <span class="balance-value">${balance.nombre_paiements}</span>
+                                </div>
+                            </div>
+                        `;
+                        balanceGrid.appendChild(card);
+                    });
+                } else {
+                    balanceGrid.innerHTML = '<div class="no-data">Aucune donnée disponible</div>';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement de la balance:', error);
+                document.getElementById('balanceGrid').innerHTML = '<div class="error">Erreur lors du chargement des données</div>';
+            }
+        }
+
+        function getMonthName(month) {
+            const months = [
+                'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+            ];
+            return months[month - 1] || '';
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStatistiques();
+            
+            // Initialiser le mois et l'année actuels pour la balance
+            const moisActuel = new Date().getMonth() + 1;
+            document.getElementById('balanceMois').value = moisActuel;
+            const anneeActuelle = new Date().getFullYear();
+            document.getElementById('balanceAnnee').value = anneeActuelle;
+            
+            loadBalance();
+            
+            // Actualiser toutes les 30 secondes
+            setInterval(loadStatistiques, 30000);
+        });
+    </script>
+</body>
+</html>
+

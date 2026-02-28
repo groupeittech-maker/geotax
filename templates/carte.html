@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte des Commerces</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: calc(100vh - 200px);
+            width: 100%;
+            border-radius: 10px;
+            z-index: 1;
+        }
+        .map-controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .map-controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .map-controls button.active {
+            background: #667eea;
+            color: white;
+        }
+        .map-controls button:not(.active) {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .map-controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .map-info {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .map-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .map-info strong {
+            color: #333;
+        }
+        .google-map-container {
+            height: calc(100vh - 200px);
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .leaflet-popup-content {
+            min-width: 200px;
+        }
+        .popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .popup-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+        .popup-info {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .popup-status {
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+            }
+        }
+        .status-paye {
+            background: #4caf50;
+            color: white;
+        }
+        .status-non-paye {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Carte des Commerces</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <div class="map-controls">
+                <button id="btnOpenStreetMap" class="active" onclick="switchMap('osm')">🗺️ OpenStreetMap</button>
+                <button id="btnGoogleMap" onclick="switchMap('google')">🌍 Google Maps</button>
+                <button onclick="centerMap()">📍 Recentrer</button>
+                <button onclick="refreshMap()">🔄 Actualiser</button>
+            </div>
+
+            <div class="map-info">
+                <p><strong>Total de commerces géolocalisés:</strong> <span id="totalCommerces">0</span></p>
+                <p><strong>Commerces à jour:</strong> <span id="commercesAJour" style="color: #4caf50;">0</span></p>
+                <p><strong>Commerces non à jour:</strong> <span id="commercesNonAJour" style="color: #f44336;">0</span></p>
+            </div>
+
+            <!-- OpenStreetMap Container -->
+            <div id="mapContainer">
+                <div id="map"></div>
+            </div>
+
+            <!-- Google Maps Container (hidden by default) -->
+            <div id="googleMapContainer" class="google-map-container" style="display: none;"></div>
+        </main>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Google Maps API - Note: Remplacez YOUR_API_KEY par votre clé API Google Maps -->
+    <!-- Pour utiliser Google Maps, vous devez obtenir une clé API gratuite sur https://console.cloud.google.com/ -->
+    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initGoogleMap" async defer></script> -->
+
+    <script>
+        let map;
+        let googleMap;
+        let markers = [];
+        let currentMapType = 'osm';
+        let commercesData = [];
+        let targetCommerceId = {% if commerce_id %}{{ commerce_id }}{% else %}null{% endif %};
+        let targetCommerceCode = '{% if commerce_code %}{{ commerce_code }}{% else %}{% endif %}';
+
+        // Initialiser la carte OpenStreetMap
+        function initMap() {
+            try {
+                console.log('Initialisation de la carte OpenStreetMap...');
+                
+                // Vérifier que l'élément map existe
+                const mapElement = document.getElementById('map');
+                if (!mapElement) {
+                    console.error('Élément #map non trouvé');
+                    return;
+                }
+                
+                map = L.map('map').setView([4.0511, 9.7679], 13); // Coordonnées par défaut (Douala, Cameroun)
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+
+                console.log('Carte OpenStreetMap initialisée');
+                
+                // Attendre que la carte soit prête avant de charger les commerces
+                map.whenReady(() => {
+                    console.log('Carte prête, chargement des commerces...');
+                    loadCommerces();
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'initialisation de la carte:', error);
+                alert('Erreur lors de l\'initialisation de la carte: ' + error.message);
+            }
+        }
+
+        // Initialiser Google Maps
+        function initGoogleMap() {
+            if (typeof google === 'undefined' || !google.maps) {
+                console.warn('Google Maps API non chargée. Utilisez OpenStreetMap ou ajoutez votre clé API Google Maps.');
+                return;
+            }
+            
+            const defaultLocation = { lat: 4.0511, lng: 9.7679 };
+            
+            googleMap = new google.maps.Map(document.getElementById('googleMapContainer'), {
+                zoom: 13,
+                center: defaultLocation,
+                mapTypeId: 'roadmap'
+            });
+
+            // Charger les commerces si on est déjà sur Google Maps
+            if (currentMapType === 'google') {
+                loadCommercesGoogle();
+            }
+        }
+
+        // Charger les commerces depuis l'API
+        async function loadCommerces() {
+            try {
+                console.log('Chargement des commerces...');
+                const response = await fetch('/api/boutiques?with_coords=true');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const commerces = await response.json();
+                console.log('Commerces reçus:', commerces.length);
+                commercesData = commerces;
+                
+                // Filtrer les commerces avec coordonnées
+                const commercesAvecCoords = commerces.filter(c => {
+                    const hasCoords = c.latitude && c.longitude;
+                    if (hasCoords) {
+                        console.log(`Commerce ${c.nom}: lat=${c.latitude}, lng=${c.longitude}`);
+                    }
+                    return hasCoords;
+                });
+                
+                console.log('Commerces avec coordonnées:', commercesAvecCoords.length);
+                
+                updateStats(commercesAvecCoords);
+                
+                if (commercesAvecCoords.length === 0) {
+                    alert('Aucun commerce géolocalisé trouvé. Veuillez ajouter des coordonnées GPS aux commerces.');
+                    return;
+                }
+                
+                if (currentMapType === 'osm') {
+                    if (!map) {
+                        console.error('La carte OpenStreetMap n\'est pas initialisée');
+                        return;
+                    }
+                    displayCommercesOSM(commercesAvecCoords);
+                } else if (currentMapType === 'google') {
+                    if (!googleMap) {
+                        console.error('La carte Google Maps n\'est pas initialisée');
+                        return;
+                    }
+                    displayCommercesGoogle(commercesAvecCoords);
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des commerces:', error);
+                alert('Erreur lors du chargement des commerces: ' + error.message);
+            }
+        }
+
+        // Afficher les commerces sur OpenStreetMap
+        function displayCommercesOSM(commerces) {
+            try {
+                console.log('Affichage de', commerces.length, 'commerces sur OpenStreetMap');
+                
+                if (!map) {
+                    console.error('La carte n\'est pas initialisée');
+                    return;
+                }
+                
+                // Supprimer les anciens marqueurs
+                markers.forEach(marker => {
+                    try {
+                        map.removeLayer(marker);
+                    } catch (e) {
+                        console.warn('Erreur lors de la suppression d\'un marqueur:', e);
+                    }
+                });
+                markers = [];
+
+                if (commerces.length === 0) {
+                    console.warn('Aucun commerce à afficher');
+                    return;
+                }
+
+                let targetMarker = null;
+
+                // Créer les marqueurs
+                commerces.forEach((commerce, index) => {
+                    try {
+                        const lat = parseFloat(commerce.latitude);
+                        const lng = parseFloat(commerce.longitude);
+                        
+                        if (isNaN(lat) || isNaN(lng)) {
+                            console.warn(`Coordonnées invalides pour le commerce ${commerce.nom}: lat=${commerce.latitude}, lng=${commerce.longitude}`);
+                            return;
+                        }
+                        
+                        console.log(`Ajout du marqueur ${index + 1}/${commerces.length}: ${commerce.nom} à [${lat}, ${lng}]`);
+                        
+                        const isPaye = commerce.a_jour;
+                        const isTarget = targetCommerceId && commerce.id === targetCommerceId;
+                        const iconColor = isTarget ? 'blue' : (isPaye ? 'green' : 'red');
+                        const iconSize = isTarget ? 40 : 30;
+                        
+                        const customIcon = L.divIcon({
+                            className: 'custom-marker',
+                            html: `<div style="
+                                background-color: ${iconColor};
+                                width: ${iconSize}px;
+                                height: ${iconSize}px;
+                                border-radius: 50% 50% 50% 0;
+                                transform: rotate(-45deg);
+                                border: 3px solid white;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                                ${isTarget ? 'animation: pulse 2s infinite;' : ''}
+                            "></div>`,
+                            iconSize: [iconSize, iconSize],
+                            iconAnchor: [iconSize/2, iconSize]
+                        });
+
+                        const marker = L.marker([lat, lng], { icon: customIcon })
+                            .addTo(map)
+                            .bindPopup(createPopupContent(commerce));
+
+                        markers.push(marker);
+                        
+                        if (isTarget) {
+                            targetMarker = marker;
+                        }
+                    } catch (error) {
+                        console.error(`Erreur lors de l'ajout du marqueur pour ${commerce.nom}:`, error);
+                    }
+                });
+
+                console.log(`${markers.length} marqueurs ajoutés sur la carte`);
+
+                // Centrer sur le commerce cible ou ajuster la vue pour afficher tous les marqueurs
+                if (targetMarker) {
+                    console.log('Centrage sur le commerce cible');
+                    map.setView([targetMarker.getLatLng().lat, targetMarker.getLatLng().lng], 16);
+                    setTimeout(() => targetMarker.openPopup(), 500);
+                } else if (markers.length > 0) {
+                    console.log('Ajustement de la vue pour afficher tous les marqueurs');
+                    const group = new L.featureGroup(markers);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                }
+            } catch (error) {
+                console.error('Erreur lors de l\'affichage des commerces:', error);
+                alert('Erreur lors de l\'affichage des commerces: ' + error.message);
+            }
+        }
+
+        // Afficher les commerces sur Google Maps
+        function displayCommercesGoogle(commerces) {
+            // Supprimer les anciens marqueurs
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            if (commerces.length === 0) {
+                alert('Aucun commerce géolocalisé trouvé');
+                return;
+            }
+
+            const bounds = new google.maps.LatLngBounds();
+            let targetMarker = null;
+
+            commerces.forEach(commerce => {
+                const isPaye = commerce.a_jour;
+                const isTarget = targetCommerceId && commerce.id === targetCommerceId;
+                const iconColor = isTarget ? 'blue' : (isPaye ? 'green' : 'red');
+                const iconScale = isTarget ? 15 : 10;
+                
+                const marker = new google.maps.Marker({
+                    position: { lat: commerce.latitude, lng: commerce.longitude },
+                    map: googleMap,
+                    title: commerce.nom,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: iconScale,
+                        fillColor: iconColor,
+                        fillOpacity: 1,
+                        strokeColor: 'white',
+                        strokeWeight: 2
+                    }
+                });
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: createPopupContent(commerce)
+                });
+
+                marker.addListener('click', () => {
+                    infoWindow.open(googleMap, marker);
+                });
+
+                markers.push(marker);
+                bounds.extend({ lat: commerce.latitude, lng: commerce.longitude });
+                
+                if (isTarget) {
+                    targetMarker = marker;
+                }
+            });
+
+            // Centrer sur le commerce cible ou ajuster la vue pour afficher tous les marqueurs
+            if (targetMarker) {
+                googleMap.setCenter(targetMarker.getPosition());
+                googleMap.setZoom(16);
+                const infoWindow = new google.maps.InfoWindow({
+                    content: createPopupContent(commerces.find(c => c.id === targetCommerceId))
+                });
+                infoWindow.open(googleMap, targetMarker);
+            } else if (markers.length > 0) {
+                googleMap.fitBounds(bounds);
+            }
+        }
+
+        // Créer le contenu du popup
+        function createPopupContent(commerce) {
+            const statusClass = commerce.a_jour ? 'status-paye' : 'status-non-paye';
+            const statusText = commerce.a_jour ? '✅ À JOUR' : '❌ NON À JOUR';
+            
+            return `
+                <div class="popup-content">
+                    <div class="popup-title">${commerce.nom}</div>
+                    <div class="popup-info"><strong>Code:</strong> ${commerce.code_unique}</div>
+                    ${commerce.proprietaire ? `<div class="popup-info"><strong>Propriétaire:</strong> ${commerce.proprietaire}</div>` : ''}
+                    ${commerce.telephone ? `<div class="popup-info"><strong>Téléphone:</strong> ${commerce.telephone}</div>` : ''}
+                    ${commerce.adresse ? `<div class="popup-info"><strong>Adresse:</strong> ${commerce.adresse}</div>` : ''}
+                    ${commerce.type_commerce ? `<div class="popup-info"><strong>Type:</strong> ${commerce.type_commerce.nom}</div>` : ''}
+                    <div class="popup-info">
+                        <span class="popup-status ${statusClass}">${statusText}</span>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <a href="/scan?code=${commerce.code_unique}" target="_blank" style="color: #667eea; text-decoration: none;">🔍 Vérifier</a> |
+                        <a href="/api/boutiques/${commerce.id}/qr" target="_blank" style="color: #667eea; text-decoration: none;">📱 QR Code</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Basculer entre les cartes
+        function switchMap(type) {
+            currentMapType = type;
+            
+            if (type === 'osm') {
+                document.getElementById('mapContainer').style.display = 'block';
+                document.getElementById('googleMapContainer').style.display = 'none';
+                document.getElementById('btnOpenStreetMap').classList.add('active');
+                document.getElementById('btnGoogleMap').classList.remove('active');
+                
+                if (!map) {
+                    initMap();
+                } else {
+                    loadCommerces();
+                }
+            } else if (type === 'google') {
+                if (typeof google === 'undefined' || !google.maps) {
+                    alert('Google Maps API non configurée. Veuillez ajouter votre clé API dans le fichier carte.html ou utilisez OpenStreetMap.');
+                    return;
+                }
+                
+                document.getElementById('mapContainer').style.display = 'none';
+                document.getElementById('googleMapContainer').style.display = 'block';
+                document.getElementById('btnOpenStreetMap').classList.remove('active');
+                document.getElementById('btnGoogleMap').classList.add('active');
+                
+                if (googleMap) {
+                    loadCommercesGoogle();
+                } else {
+                    initGoogleMap();
+                    // Attendre que Google Maps soit chargé
+                    const checkGoogleMap = setInterval(() => {
+                        if (googleMap) {
+                            clearInterval(checkGoogleMap);
+                            loadCommercesGoogle();
+                        }
+                    }, 100);
+                }
+            }
+        }
+
+        // Charger les commerces pour Google Maps
+        function loadCommercesGoogle() {
+            const commercesAvecCoords = commercesData.filter(c => c.latitude && c.longitude);
+            displayCommercesGoogle(commercesAvecCoords);
+        }
+
+        // Recentrer la carte
+        function centerMap() {
+            if (currentMapType === 'osm' && map && markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            } else if (currentMapType === 'google' && googleMap && markers.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                markers.forEach(marker => bounds.extend(marker.getPosition()));
+                googleMap.fitBounds(bounds);
+            }
+        }
+
+        // Actualiser la carte
+        function refreshMap() {
+            loadCommerces();
+        }
+
+        // Mettre à jour les statistiques
+        function updateStats(commerces) {
+            const total = commerces.length;
+            const aJour = commerces.filter(c => c.a_jour).length;
+            const nonAJour = total - aJour;
+            
+            document.getElementById('totalCommerces').textContent = total;
+            document.getElementById('commercesAJour').textContent = aJour;
+            document.getElementById('commercesNonAJour').textContent = nonAJour;
+        }
+
+        // Initialiser la carte au chargement
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+        });
+    </script>
+</body>
+</html>
+

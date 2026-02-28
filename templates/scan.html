@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner QR Code - Contrôle Fiscal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Scanner QR Code</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <section class="scan-section">
+                <div class="scan-container">
+                    <h2>Scanner le QR Code d'une Boutique</h2>
+                    
+                    <!-- Boutons de choix de méthode -->
+                    <div class="scan-methods">
+                        <button id="btnCamera" onclick="startCameraScan()" class="btn btn-primary btn-large">
+                            📷 Scanner avec la Caméra
+                        </button>
+                        <button id="btnManual" onclick="showManualInput()" class="btn btn-secondary btn-large">
+                            ⌨️ Saisir Manuellement
+                        </button>
+                    </div>
+
+                    <!-- Zone de scan caméra -->
+                    <div id="cameraSection" style="display: none;">
+                        <div id="reader" style="width: 100%; max-width: 500px; margin: 20px auto;"></div>
+                        <button onclick="stopCameraScan()" class="btn btn-warning" style="display: none;" id="stopBtn">
+                            ❌ Arrêter le Scan
+                        </button>
+                    </div>
+
+                    <!-- Zone de saisie manuelle -->
+                    <div id="manualSection" style="display: none;">
+                        <div class="scan-input-group">
+                            <label for="codeInput">Code Boutique:</label>
+                            <div class="input-with-button">
+                                <input type="text" id="codeInput" placeholder="BOUTIQUE-57891" 
+                                       onkeypress="if(event.key === 'Enter') scanBoutique()">
+                                <button onclick="scanBoutique()" class="btn btn-primary">🔍 Vérifier</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="scanResult" class="scan-result" style="display: none;">
+                        <!-- Résultat du scan -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="instructions-section">
+                <h2>Instructions</h2>
+                <div class="instructions">
+                    <div class="instruction-card">
+                        <h3>📱 Pour les Contrôleurs</h3>
+                        <ol>
+                            <li><strong>Méthode 1 - Scan Caméra:</strong>
+                                <ul>
+                                    <li>Cliquer sur "📷 Scanner avec la Caméra"</li>
+                                    <li>Autoriser l'accès à la caméra si demandé</li>
+                                    <li>Pointer la caméra vers le QR code de la boutique</li>
+                                    <li>Le scan est automatique - pas besoin de prendre une photo!</li>
+                                </ul>
+                            </li>
+                            <li><strong>Méthode 2 - Saisie Manuelle:</strong>
+                                <ul>
+                                    <li>Cliquer sur "⌨️ Saisir Manuellement"</li>
+                                    <li>Entrer le code de la boutique (ex: BOUTIQUE-57891)</li>
+                                    <li>Cliquer sur "🔍 Vérifier"</li>
+                                </ul>
+                            </li>
+                            <li>Le statut de paiement s'affiche immédiatement: ✅ PAYÉ ou ❌ NON PAYÉ</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="instruction-card">
+                        <h3>💳 Pour les Commerçants</h3>
+                        <ol>
+                            <li><strong>Via USSD:</strong> Composez *123*CODE_BOUTIQUE*MONTANT#</li>
+                            <li><strong>Via Mobile Money:</strong> Envoyez le code boutique en référence</li>
+                            <li>Le paiement est automatiquement enregistré</li>
+                            <li>Conservez votre QR code pour les contrôles</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+
+        // Vérifier si un code est passé en paramètre URL
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                document.getElementById('codeInput').value = code;
+                showManualInput();
+                scanBoutique();
+            } else {
+                // Par défaut, proposer le scan caméra
+                if (isMobileDevice()) {
+                    startCameraScan();
+                }
+            }
+        });
+
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        function startCameraScan() {
+            // Masquer les autres sections
+            document.getElementById('manualSection').style.display = 'none';
+            document.getElementById('scanResult').style.display = 'none';
+            
+            // Afficher la section caméra
+            const cameraSection = document.getElementById('cameraSection');
+            cameraSection.style.display = 'block';
+            
+            // Désactiver les boutons
+            document.getElementById('btnCamera').disabled = true;
+            document.getElementById('btnManual').disabled = false;
+            
+            // Initialiser le scanner
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5Qrcode("reader");
+            }
+            
+            // Démarrer le scan
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, // Utiliser la caméra arrière sur mobile
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                onScanError
+            ).then(() => {
+                isScanning = true;
+                document.getElementById('stopBtn').style.display = 'block';
+            }).catch(err => {
+                console.error("Erreur lors du démarrage de la caméra:", err);
+                alert("Impossible d'accéder à la caméra. Vérifiez les permissions ou utilisez la saisie manuelle.");
+                showManualInput();
+            });
+        }
+
+        function stopCameraScan() {
+            if (html5QrcodeScanner && isScanning) {
+                html5QrcodeScanner.stop().then(() => {
+                    isScanning = false;
+                    document.getElementById('stopBtn').style.display = 'none';
+                    document.getElementById('btnCamera').disabled = false;
+                }).catch(err => {
+                    console.error("Erreur lors de l'arrêt de la caméra:", err);
+                });
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Arrêter le scan
+            stopCameraScan();
+            
+            // Nettoyer le code (enlever le préfixe FISCAL: si présent)
+            const cleanCode = decodedText.replace(/^FISCAL:/, '');
+            
+            // Afficher dans le champ de saisie
+            document.getElementById('codeInput').value = cleanCode;
+            
+            // Vérifier la boutique
+            verifyBoutique(cleanCode);
+        }
+
+        function onScanError(errorMessage) {
+            // Erreur silencieuse pendant le scan
+            // console.log("Erreur de scan:", errorMessage);
+        }
+
+        function showManualInput() {
+            // Arrêter le scan si actif
+            if (isScanning) {
+                stopCameraScan();
+            }
+            
+            // Masquer la section caméra
+            document.getElementById('cameraSection').style.display = 'none';
+            
+            // Afficher la section manuelle
+            document.getElementById('manualSection').style.display = 'block';
+            
+            // Activer les boutons
+            document.getElementById('btnCamera').disabled = false;
+            document.getElementById('btnManual').disabled = true;
+            
+            // Focus sur l'input
+            document.getElementById('codeInput').focus();
+        }
+
+        async function scanBoutique() {
+            const codeInput = document.getElementById('codeInput');
+            const code = codeInput.value.trim();
+            
+            if (!code) {
+                alert('Veuillez saisir un code boutique');
+                return;
+            }
+            
+            // Nettoyer le code (enlever le préfixe FISCAL: si présent)
+            const cleanCode = code.replace(/^FISCAL:/, '');
+            verifyBoutique(cleanCode);
+        }
+
+        async function verifyBoutique(cleanCode) {
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">Vérification en cours...</div>';
+            
+            try {
+                const response = await fetch(`/api/scan/${encodeURIComponent(cleanCode)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResult(data);
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result-error">
+                            <h3>❌ Erreur</h3>
+                            <p>${data.error || 'Boutique non trouvée'}</p>
+                            <button onclick="startCameraScan()" class="btn btn-primary" style="margin-top: 10px;">
+                                🔄 Réessayer avec la caméra
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-error">
+                        <h3>❌ Erreur de connexion</h3>
+                        <p>Impossible de vérifier la boutique. Vérifiez votre connexion internet.</p>
+                        <button onclick="startCameraScan()" class="btn btn-primary" style="margin-top: 10px;">
+                            🔄 Réessayer avec la caméra
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayResult(data) {
+            // Mettre à jour pour afficher les taxes
+            const resultDiv = document.getElementById('scanResult');
+            const statutClass = data.statut_paiement === 'PAYE' ? 'result-success' : 'result-warning';
+            const statutIcon = data.statut_paiement === 'PAYE' ? '✅' : '❌';
+            const statutText = data.statut_paiement === 'PAYE' ? 'PAYÉ' : 'NON PAYÉ';
+            
+            const dernierPaiement = data.dernier_paiement 
+                ? new Date(data.dernier_paiement.date_paiement).toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                  })
+                : 'Aucun paiement enregistré';
+            
+            resultDiv.innerHTML = `
+                <div class="${statutClass}">
+                    <div class="result-header">
+                        <h2>${statutIcon} ${statutText}</h2>
+                        <div class="result-code">Code: ${data.boutique.code_unique}</div>
+                    </div>
+                    
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <strong>Nom:</strong> ${data.boutique.nom}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Propriétaire:</strong> ${data.boutique.proprietaire || 'Non renseigné'}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Adresse:</strong> ${data.boutique.adresse || 'Non renseignée'}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Arrondissement:</strong> ${data.boutique.arrondissement || 'Non renseigné'}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Zone:</strong> ${data.boutique.zone || 'Non renseignée'}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Marché:</strong> ${data.boutique.marche || 'Non renseigné'}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Période vérifiée:</strong> ${getMonthName(data.mois)} ${data.annee}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Dernier paiement:</strong> ${dernierPaiement}
+                        </div>
+                        ${data.dernier_paiement ? `
+                        <div class="detail-row">
+                            <strong>Montant dernier paiement:</strong> ${new Intl.NumberFormat('fr-FR').format(data.dernier_paiement.montant)} FCFA
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${data.statut_paiement === 'NON_PAYE' ? `
+                    <div class="simulation-scan-zone" style="margin-top: 20px; padding: 16px; background: linear-gradient(135deg, rgba(251, 222, 74, 0.15) 0%, rgba(251, 222, 74, 0.05) 100%); border-radius: 12px; border: 1px solid rgba(251, 222, 74, 0.4);">
+                        <p style="margin: 0 0 12px 0; font-size: 0.95em; color: #5c6773;">
+                            <strong>🧪 Mode test :</strong> En attendant l'implémentation USSD/Mobile Money, simulez un paiement.
+                        </p>
+                        <button type="button" class="btn btn-simulation" onclick="simulerPaiementScan('${data.boutique.code_unique}')">
+                            🧪 Simuler un paiement
+                        </button>
+                    </div>
+                    ` : ''}
+                    ${data.taxes_status && data.taxes_status.length > 0 ? `
+                    <div class="taxes-section" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd;">
+                        <h3 style="margin-bottom: 15px;">📋 Détail des Taxes</h3>
+                        ${data.taxes_status.map(t => {
+                            const statutIcon = t.payee ? '✅' : '❌';
+                            const statutText = t.payee ? 'PAYÉE' : 'NON PAYÉE';
+                            const statutClass = t.payee ? 'taxe-payee' : 'taxe-non-payee';
+                            return `
+                                <div class="taxe-item ${statutClass}" style="margin-bottom: 15px; padding: 15px; background: ${t.payee ? '#e8f5e9' : '#ffebee'}; border-radius: 8px; border-left: 4px solid ${t.payee ? '#4caf50' : '#f44336'};">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <strong>${statutIcon} ${t.taxe.nom}</strong>
+                                        <span style="font-weight: bold; color: ${t.payee ? '#2e7d32' : '#c62828'};">${statutText}</span>
+                                    </div>
+                                    <div style="font-size: 0.9em; color: #666;">
+                                        <div><strong>Institution:</strong> ${t.institut_nom}</div>
+                                        <div><strong>Montant attendu:</strong> ${t.montant_attendu.toLocaleString('fr-FR')} FCFA</div>
+                                        ${t.payee && t.paiement ? `
+                                            <div><strong>Montant payé:</strong> ${t.montant_paye.toLocaleString('fr-FR')} FCFA</div>
+                                            <div><strong>Date:</strong> ${new Date(t.paiement.date_paiement).toLocaleDateString('fr-FR')}</div>
+                                            <div><strong>Méthode:</strong> ${t.paiement.methode}</div>
+                                            ${t.difference !== 0 ? `
+                                                <div style="color: ${t.difference > 0 ? '#ff9800' : '#f44336'};">
+                                                    <strong>Différence:</strong> ${t.difference > 0 ? '+' : ''}${t.difference.toLocaleString('fr-FR')} FCFA
+                                                </div>
+                                            ` : ''}
+                                        ` : '<div style="color: #f44336; font-weight: bold;">⚠️ Taxe non payée</div>'}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function getMonthName(month) {
+            const months = [
+                'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+            ];
+            return months[month - 1] || '';
+        }
+
+        async function simulerPaiementScan(codeBoutique) {
+            try {
+                const response = await fetch(`/api/scan/${encodeURIComponent(codeBoutique)}/simuler-paiement`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    verifyBoutique(codeBoutique);
+                } else {
+                    alert(data.error || 'Erreur lors de la simulation');
+                }
+            } catch (err) {
+                alert('Erreur de connexion.');
+            }
+        }
+    </script>
+</body>
+</html>
+

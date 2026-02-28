@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Espace Commerçant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="commercant-auth-card">
+            <div class="auth-header">
+                <h1>🏪 Espace Commerçant</h1>
+                <p>Connectez-vous pour suivre l'historique de vos paiements</p>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="code_unique">Code Boutique *</label>
+                    <input type="text" id="code_unique" name="code_unique" 
+                           placeholder="Ex: BOUTIQUE-57891" required 
+                           style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label for="mot_de_passe">Mot de passe *</label>
+                    <input type="password" id="mot_de_passe" name="mot_de_passe" 
+                           placeholder="Votre mot de passe" required>
+                </div>
+                <div id="loginError" class="auth-error" style="display: none;"></div>
+                <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Pas encore de compte ? <a href="{{ url_for('commercant_inscription') }}">Créer un compte</a></p>
+                <p><a href="/">← Retour à l'accueil</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('code_unique').value.trim().toUpperCase();
+            const password = document.getElementById('mot_de_passe').value;
+            const errorDiv = document.getElementById('loginError');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+
+            errorDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Connexion...';
+
+            try {
+                const response = await fetch('/api/commercant/connexion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code_unique: code, mot_de_passe: password })
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    window.location.href = '/commercant/dashboard';
+                } else {
+                    errorDiv.textContent = data.error || 'Erreur de connexion';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Erreur de connexion. Réessayez.';
+                errorDiv.style.display = 'block';
+            }
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Se connecter';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Utilisateurs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👥 Gestion des Utilisateurs</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <section>
+                <div class="section-header">
+                    <h2>Liste des utilisateurs</h2>
+                    <button type="button" class="btn btn-primary" onclick="openUserModal()">➕ Ajouter un utilisateur</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Identifiant</th>
+                                <th>Nom</th>
+                                <th>Rôle</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr><td colspan="5" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Utilisateur -->
+    <div id="userModal" class="modal modal-user">
+        <div class="modal-overlay" onclick="closeUserModal()"></div>
+        <div class="modal-content modal-user-content">
+            <div class="modal-header modal-user-header">
+                <div class="modal-header-inner">
+                    <span class="modal-icon">👤</span>
+                    <h2 id="userModalTitle">Ajouter un utilisateur</h2>
+                </div>
+                <button type="button" class="modal-close" onclick="closeUserModal()" aria-label="Fermer">&times;</button>
+            </div>
+            <form id="userForm" class="modal-user-form" onsubmit="saveUser(event)">
+                <input type="hidden" id="userId">
+                <div class="form-grid modal-form-grid">
+                    <div class="form-group">
+                        <label for="userUsername">Identifiant <span class="required">*</span></label>
+                        <input type="text" id="userUsername" required placeholder="Ex: agent01">
+                    </div>
+                    <div class="form-group">
+                        <label for="userPassword">Mot de passe <span id="pwdHint" class="required">*</span></label>
+                        <input type="password" id="userPassword" placeholder="Laisser vide pour conserver">
+                    </div>
+                    <div class="form-group">
+                        <label for="userNom">Nom complet</label>
+                        <input type="text" id="userNom" placeholder="Ex: Jean Dupont">
+                    </div>
+                    <div class="form-group">
+                        <label for="userRole">Rôle <span class="required">*</span></label>
+                        <select id="userRole" required>
+                            <option value="agent_terrain">Agent de terrain</option>
+                            <option value="agent_financier">Agent financier</option>
+                            <option value="conseiller_municipal">Conseiller municipal</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-group-checkbox">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="userActif" checked>
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-text">Compte actif</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer modal-user-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-icon">✓</span> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/users');
+                const users = await res.json();
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '';
+                const roleLabels = { agent_terrain: 'Agent terrain', agent_financier: 'Agent financier', conseiller_municipal: 'Conseiller municipal', admin: 'Admin' };
+                users.forEach(u => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${u.username}</td>
+                        <td>${u.nom || '-'}</td>
+                        <td>${roleLabels[u.role] || u.role}</td>
+                        <td>${u.actif ? '✅ Actif' : '❌ Inactif'}</td>
+                        <td>
+                            <button onclick="editUser(${u.id})" class="btn-small">✏️</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (e) {
+                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="5" class="error">Erreur</td></tr>';
+            }
+        }
+
+        function openUserModal() {
+            document.getElementById('userModalTitle').textContent = 'Ajouter un utilisateur';
+            document.getElementById('userId').value = '';
+            document.getElementById('userForm').reset();
+            document.getElementById('userPassword').required = true;
+            const pwdHint = document.getElementById('pwdHint');
+            pwdHint.textContent = '*';
+            pwdHint.classList.add('required');
+            document.getElementById('userModal').classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('modal-open');
+            document.body.style.overflow = '';
+        }
+
+        async function editUser(id) {
+            const res = await fetch(`/api/users/${id}`);
+            const u = await res.json();
+            document.getElementById('userModalTitle').textContent = 'Modifier l\'utilisateur';
+            document.getElementById('userId').value = u.id;
+            document.getElementById('userUsername').value = u.username;
+            document.getElementById('userUsername').readOnly = true;
+            document.getElementById('userNom').value = u.nom || '';
+            document.getElementById('userRole').value = u.role;
+            document.getElementById('userActif').checked = u.actif;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userPassword').required = false;
+            const pwdHint = document.getElementById('pwdHint');
+            pwdHint.textContent = '(vide = conserver)';
+            pwdHint.classList.remove('required');
+            document.getElementById('userModal').classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        async function saveUser(e) {
+            e.preventDefault();
+            const id = document.getElementById('userId').value;
+            const data = {
+                username: document.getElementById('userUsername').value,
+                nom: document.getElementById('userNom').value,
+                role: document.getElementById('userRole').value,
+                actif: document.getElementById('userActif').checked
+            };
+            const pwd = document.getElementById('userPassword').value;
+            if (pwd) data.password = pwd;
+            try {
+                const url = id ? `/api/users/${id}` : '/api/users';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                if (res.ok) {
+                    closeUserModal();
+                    loadUsers();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Erreur');
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadUsers);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeUserModal();
+        });
+    </script>
+</body>
+</html>

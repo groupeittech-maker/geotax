@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu de paiement - {{ paiement.numero_transaction or paiement.reference_transaction }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; max-width: 600px; margin: 0 auto; }
+        .receipt { border: 2px solid #333; border-radius: 8px; padding: 32px; }
+        .header { text-align: center; border-bottom: 2px solid #009e60; padding-bottom: 24px; margin-bottom: 24px; }
+        .header h1 { color: #009e60; font-size: 1.5rem; margin-bottom: 8px; }
+        .header .subtitle { color: #666; font-size: 0.9rem; }
+        .numero { font-size: 1.4rem; font-weight: 800; color: #009e60; text-align: center; margin: 20px 0; letter-spacing: 1px; }
+        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .row .label { color: #666; }
+        .row .value { font-weight: 600; }
+        .montant-box { background: rgba(0, 158, 96, 0.1); border: 2px solid #009e60; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center; }
+        .montant-box .montant { font-size: 2rem; font-weight: 800; color: #009e60; }
+        .footer { margin-top: 32px; padding-top: 24px; border-top: 1px dashed #999; font-size: 0.85rem; color: #666; text-align: center; }
+        .print-btn { display: block; margin: 24px auto; padding: 12px 32px; background: #009e60; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        .print-btn:hover { background: #008050; }
+        .qr-section { text-align: center; margin: 24px 0; padding: 16px; background: #f8f9fa; border-radius: 8px; }
+        .qr-label { font-size: 0.9rem; color: #666; margin-bottom: 12px; }
+        .qr-image { width: 140px; height: 140px; display: block; margin: 0 auto; }
+        @media print {
+            .print-btn { display: none !important; }
+            body { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer le reçu</button>
+    
+    <div class="receipt">
+        <div class="header">
+            <h1>REÇU DE PAIEMENT FISCAL</h1>
+            <p class="subtitle">République du Congo - Système de Paiement des Taxes</p>
+        </div>
+        
+        <div class="numero">{{ paiement.numero_transaction or paiement.reference_transaction or 'N/A' }}</div>
+        
+        <div class="row">
+            <span class="label">Date du paiement</span>
+            <span class="value">{{ paiement.date_paiement.strftime('%d/%m/%Y à %H:%M') if paiement.date_paiement else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Commerce</span>
+            <span class="value">{{ paiement.boutique.nom if paiement.boutique else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Code commerce</span>
+            <span class="value">{{ paiement.boutique.code_unique if paiement.boutique else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Institution</span>
+            <span class="value">{{ paiement.institut.nom if paiement.institut else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Type de taxe</span>
+            <span class="value">{{ paiement.taxe.nom if paiement.taxe else 'Taxe générale' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Période</span>
+            <span class="value">{{ mois_noms[paiement.mois - 1] }} {{ paiement.annee }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Méthode de paiement</span>
+            <span class="value">{{ paiement.methode or 'N/A' }}</span>
+        </div>
+        {% if paiement.reference_transaction %}
+        <div class="row">
+            <span class="label">Référence</span>
+            <span class="value">{{ paiement.reference_transaction }}</span>
+        </div>
+        {% endif %}
+        
+        <div class="montant-box">
+            <div class="label">Montant payé</div>
+            <div class="montant">{{ "{:,.0f}".format(paiement.montant).replace(",", " ") }} FCFA</div>
+        </div>
+        
+        {% if qr_base64 %}
+        <div class="qr-section">
+            <div class="qr-label">Scannez pour vérifier ce reçu</div>
+            <img src="{{ qr_base64 }}" alt="QR Code de vérification" class="qr-image">
+        </div>
+        {% endif %}
+        
+        <div class="footer">
+            <p>Ce reçu atteste du paiement effectué pour la période indiquée.</p>
+            <p>Conservez ce document comme preuve de paiement.</p>
+            <p style="margin-top: 12px;">Imprimé le {{ now.strftime('%d/%m/%Y à %H:%M') }}</p>
+        </div>
+    </div>
+    
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer le reçu</button>
+</body>
+</html>

@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramétrage Géographique</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Paramétrage Géographique</h1>
+            {% include '_nav.html' %}
+        </header>
+
+        <main>
+            <!-- Onglets -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('pays', this)">🌍 Pays</button>
+                <button class="tab-btn" onclick="showTab('departements', this)">📍 Départements</button>
+                <button class="tab-btn" onclick="showTab('communes', this)">🏘️ Communes</button>
+                <button class="tab-btn" onclick="showTab('quartiers', this)">🏠 Quartiers/Villages</button>
+                <button class="tab-btn" onclick="showTab('marches', this)">🏪 Marchés</button>
+                <button class="tab-btn" onclick="showTab('types-commerce', this)">🏪 Types de Commerce</button>
+                <button class="tab-btn" onclick="showTab('instituts', this)">🏛️ Instituts</button>
+                <button class="tab-btn" onclick="showTab('taxes', this)">💰 Taxes</button>
+                <button class="tab-btn" onclick="showTab('repartition', this)">📊 Répartition</button>
+            </div>
+
+            <!-- Section Pays -->
+            <div id="tab-pays" class="tab-content active">
+                <h2>Gestion des Pays</h2>
+                <button onclick="showAddForm('pays')" class="btn btn-primary">➕ Ajouter un Pays</button>
+                
+                <div id="form-pays" class="add-form" style="display: none;">
+                    <h3>Nouveau Pays</h3>
+                    <form onsubmit="addPays(event)">
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="pays-code" required placeholder="CMR">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="pays-nom" required placeholder="Cameroun">
+                        </div>
+                        <div class="form-group">
+                            <label>Code ISO (optionnel):</label>
+                            <input type="text" id="pays-code-iso" placeholder="CMR" maxlength="3">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('pays')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-pays">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Code ISO</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-pays">
+                            <tr><td colspan="4" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Départements -->
+            <div id="tab-departements" class="tab-content">
+                <h2>Gestion des Départements</h2>
+                <button onclick="showAddForm('departements')" class="btn btn-primary">➕ Ajouter un Département</button>
+                
+                <div id="form-departements" class="add-form" style="display: none;">
+                    <h3>Nouveau Département</h3>
+                    <form onsubmit="addDepartement(event)">
+                        <div class="form-group">
+                            <label>Pays *:</label>
+                            <select id="departement-pays-id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="departement-code" required placeholder="001">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="departement-nom" required placeholder="Département de...">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('departements')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-departements">
+                        <thead>
+                            <tr>
+                                <th>Pays</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-departements">
+                            <tr><td colspan="4" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Communes -->
+            <div id="tab-communes" class="tab-content">
+                <h2>Gestion des Communes</h2>
+                <button onclick="showAddForm('communes')" class="btn btn-primary">➕ Ajouter une Commune</button>
+                
+                <div id="form-communes" class="add-form" style="display: none;">
+                    <h3>Nouvelle Commune</h3>
+                    <form onsubmit="addCommune(event)">
+                        <div class="form-group">
+                            <label>Département *:</label>
+                            <select id="commune-departement-id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="commune-code" required placeholder="001">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="commune-nom" required placeholder="Commune de...">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('communes')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-communes">
+                        <thead>
+                            <tr>
+                                <th>Département</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-communes">
+                            <tr><td colspan="4" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Quartiers/Villages -->
+            <div id="tab-quartiers" class="tab-content">
+                <h2>Gestion des Quartiers/Villages</h2>
+                <button onclick="showAddForm('quartiers')" class="btn btn-primary">➕ Ajouter un Quartier/Village</button>
+                
+                <div id="form-quartiers" class="add-form" style="display: none;">
+                    <h3>Nouveau Quartier/Village</h3>
+                    <form onsubmit="addQuartierVillage(event)">
+                        <div class="form-group">
+                            <label>Commune *:</label>
+                            <select id="quartier-commune-id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Type *:</label>
+                            <select id="quartier-type" required>
+                                <option value="quartier">Quartier</option>
+                                <option value="village">Village</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="quartier-code" required placeholder="001">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="quartier-nom" required placeholder="Nom du quartier/village">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('quartiers')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-quartiers">
+                        <thead>
+                            <tr>
+                                <th>Commune</th>
+                                <th>Type</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-quartiers">
+                            <tr><td colspan="5" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+                <!-- Section Types de Commerce -->
+                <div id="tab-types-commerce" class="tab-content">
+                    <h2>Gestion des Types de Commerce</h2>
+                    <button onclick="showAddForm('types-commerce')" class="btn btn-primary">➕ Ajouter un Type de Commerce</button>
+
+                    <div id="form-types-commerce" class="add-form" style="display: none;">
+                        <h3>Nouveau Type de Commerce</h3>
+                        <form onsubmit="addTypeCommerce(event)">
+                            <div class="form-group">
+                                <label>Code *:</label>
+                                <input type="text" id="type-commerce-code" required placeholder="RESTAURANT">
+                            </div>
+                            <div class="form-group">
+                                <label>Nom *:</label>
+                                <input type="text" id="type-commerce-nom" required placeholder="Restaurant">
+                            </div>
+                            <div class="form-group">
+                                <label>Description:</label>
+                                <textarea id="type-commerce-description" rows="3" placeholder="Description du type de commerce"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <button type="button" onclick="hideForm('types-commerce')" class="btn btn-secondary">Annuler</button>
+                        </form>
+                    </div>
+
+                    <div class="table-container" style="margin-top: 20px;">
+                        <table id="table-types-commerce">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Nom</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-types-commerce">
+                                <tr><td colspan="4" class="loading">Chargement...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section Marchés -->
+                <div id="tab-marches" class="tab-content">
+                <h2>Gestion des Marchés</h2>
+                <button onclick="showAddForm('marches')" class="btn btn-primary">➕ Ajouter un Marché</button>
+                
+                <div id="form-marches" class="add-form" style="display: none;">
+                    <h3>Nouveau Marché</h3>
+                    <form onsubmit="addMarche(event)">
+                        <div class="form-group">
+                            <label>Quartier/Village (optionnel):</label>
+                            <select id="marche-quartier-id"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="marche-code" required placeholder="M001">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="marche-nom" required placeholder="Marché Central">
+                        </div>
+                        <div class="form-group">
+                            <label>Adresse:</label>
+                            <input type="text" id="marche-adresse" placeholder="Adresse du marché">
+                        </div>
+                        <div class="form-group">
+                            <label>Description:</label>
+                            <textarea id="marche-description" rows="3" placeholder="Description du marché"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('marches')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-marches">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Quartier/Village</th>
+                                <th>Commune</th>
+                                <th>Adresse</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-marches">
+                            <tr><td colspan="6" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Instituts -->
+            <div id="tab-instituts" class="tab-content">
+                <h2>Gestion des Instituts</h2>
+                <button onclick="showAddForm('instituts')" class="btn btn-primary">➕ Ajouter un Institut</button>
+                
+                <div id="form-instituts" class="add-form" style="display: none;">
+                    <h3>Nouvel Institut</h3>
+                    <form onsubmit="addInstitut(event)">
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="institut-code" required placeholder="IMPOTS" style="text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="institut-nom" required placeholder="Direction Générale des Impôts">
+                        </div>
+                        <div class="form-group">
+                            <label>Type *:</label>
+                            <select id="institut-type" required>
+                                <option value="impots">Impôts</option>
+                                <option value="police">Police</option>
+                                <option value="mairie">Mairie</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Description:</label>
+                            <textarea id="institut-description" rows="3" placeholder="Description de l'institut"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('instituts')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-instituts">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-instituts">
+                            <tr><td colspan="5" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Taxes -->
+            <div id="tab-taxes" class="tab-content">
+                <h2>Gestion des Taxes</h2>
+                <button onclick="showAddForm('taxes')" class="btn btn-primary">➕ Ajouter une Taxe</button>
+                
+                <div id="form-taxes" class="add-form" style="display: none;">
+                    <h3>Nouvelle Taxe</h3>
+                    <form onsubmit="addTaxe(event)">
+                        <div class="form-group">
+                            <label>Institut *:</label>
+                            <select id="taxe-institut-id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Code *:</label>
+                            <input type="text" id="taxe-code" required placeholder="TAXE_FISCALE" style="text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *:</label>
+                            <input type="text" id="taxe-nom" required placeholder="Taxe Fiscale Mensuelle">
+                        </div>
+                        <div class="form-group">
+                            <label>Montant Attendu (FCFA) *:</label>
+                            <input type="number" id="taxe-montant" required step="0.01" min="0" placeholder="5000">
+                        </div>
+                        <div class="form-group">
+                            <label>Périodicité *:</label>
+                            <select id="taxe-periodicite" required>
+                                <option value="mensuel">Mensuel</option>
+                                <option value="trimestriel">Trimestriel</option>
+                                <option value="annuel">Annuel</option>
+                                <option value="ponctuel">Ponctuel</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Description:</label>
+                            <textarea id="taxe-description" rows="3" placeholder="Description de la taxe"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" onclick="hideForm('taxes')" class="btn btn-secondary">Annuler</button>
+                    </form>
+                </div>
+
+                <div class="table-container" style="margin-top: 20px;">
+                    <table id="table-taxes">
+                        <thead>
+                            <tr>
+                                <th>Institut</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Montant Attendu</th>
+                                <th>Périodicité</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-taxes">
+                            <tr><td colspan="6" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Répartition -->
+            <div id="tab-repartition" class="tab-content">
+                <h2>Répartition des recouvrements</h2>
+                <p class="section-desc">Définir les pourcentages de répartition du montant total recouvré entre les partenaires.</p>
+                <div class="add-form" style="max-width: 500px;">
+                    <form onsubmit="saveRepartition(event)">
+                        <div class="form-group">
+                            <label for="repartition-institution">Institution (%)</label>
+                            <input type="number" id="repartition-institution" min="0" max="100" step="0.01" required placeholder="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="repartition-partenaire">Partenaire technique (%)</label>
+                            <input type="number" id="repartition-partenaire" min="0" max="100" step="0.01" required placeholder="17">
+                        </div>
+                        <div class="form-group">
+                            <label for="repartition-mtn">MTN (%)</label>
+                            <input type="number" id="repartition-mtn" min="0" max="100" step="0.01" required placeholder="3">
+                        </div>
+                        <div id="repartitionTotal" class="repartition-total"></div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Gestion des onglets
+        function showTab(tabName, eventElement) {
+            // Masquer tous les contenus
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Afficher l'onglet sélectionné
+            const tabContent = document.getElementById(`tab-${tabName}`);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+            
+            // Activer le bouton correspondant
+            if (eventElement) {
+                eventElement.classList.add('active');
+            } else {
+                // Trouver le bouton correspondant
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    if (btn.textContent.includes(tabName.charAt(0).toUpperCase() + tabName.slice(1)) || 
+                        btn.getAttribute('onclick')?.includes(tabName)) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+            
+            // Charger les données
+            loadData(tabName);
+        }
+
+        function showAddForm(type) {
+            document.getElementById(`form-${type}`).style.display = 'block';
+            if (type === 'departements' || type === 'communes' || type === 'quartiers') {
+                loadSelectOptions(type);
+            } else if (type === 'taxes') {
+                loadInstitutsForSelect('taxe-institut-id');
+            } else if (type === 'marches') {
+                loadQuartiersVillagesForSelect('marche-quartier-id');
+            }
+        }
+
+        function hideForm(type) {
+            document.getElementById(`form-${type}`).style.display = 'none';
+            document.getElementById(`form-${type}`).querySelector('form').reset();
+        }
+
+        // Charger les données
+        async function loadData(type) {
+            try {
+                if (type === 'pays') {
+                    await loadPays();
+                } else if (type === 'departements') {
+                    await loadDepartements();
+                    await loadPaysForSelect('departement-pays-id');
+                } else if (type === 'communes') {
+                    await loadCommunes();
+                    await loadDepartementsForSelect('commune-departement-id');
+                } else if (type === 'quartiers') {
+                    await loadQuartiersVillages();
+                    await loadCommunesForSelect('quartier-commune-id');
+                } else if (type === 'marches') {
+                    await loadMarches();
+                    await loadQuartiersVillagesForSelect('marche-quartier-id');
+                } else if (type === 'types-commerce') {
+                    await loadTypesCommerce();
+                } else if (type === 'instituts') {
+                    await loadInstituts();
+                } else if (type === 'taxes') {
+                    await loadTaxes();
+                    await loadInstitutsForSelect('taxe-institut-id');
+                } else if (type === 'repartition') {
+                    await loadRepartition();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        // Charger les options pour les selects
+        async function loadPaysForSelect(selectId) {
+            const response = await fetch('/api/pays');
+            const pays = await response.json();
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Sélectionner un pays</option>';
+            pays.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = `${p.nom} (${p.code})`;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadDepartementsForSelect(selectId, paysId = null) {
+            const url = paysId ? `/api/departements?pays_id=${paysId}` : '/api/departements';
+            const response = await fetch(url);
+            const departements = await response.json();
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Sélectionner un département</option>';
+            departements.forEach(d => {
+                const option = document.createElement('option');
+                option.value = d.id;
+                option.textContent = `${d.nom} (${d.code}) - ${d.pays_nom}`;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadCommunesForSelect(selectId, departementId = null) {
+            const url = departementId ? `/api/communes?departement_id=${departementId}` : '/api/communes';
+            const response = await fetch(url);
+            const communes = await response.json();
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Sélectionner une commune</option>';
+            communes.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = `${c.nom} (${c.code}) - ${c.departement_nom}`;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadQuartiersVillagesForSelect(selectId, communeId = null) {
+            const url = communeId ? `/api/quartiers-villages?commune_id=${communeId}` : '/api/quartiers-villages';
+            const response = await fetch(url);
+            const quartiers = await response.json();
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Sélectionner un quartier/village (optionnel)</option>';
+            quartiers.forEach(q => {
+                const option = document.createElement('option');
+                option.value = q.id;
+                option.textContent = `${q.nom} (${q.type}) - ${q.commune_nom || ''}`;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadSelectOptions(type) {
+            if (type === 'departements') {
+                await loadPaysForSelect('departement-pays-id');
+            } else if (type === 'communes') {
+                await loadDepartementsForSelect('commune-departement-id');
+            } else if (type === 'quartiers') {
+                await loadCommunesForSelect('quartier-commune-id');
+            }
+        }
+
+        // PAYS
+        async function loadPays() {
+            const response = await fetch('/api/pays');
+            const pays = await response.json();
+            const tbody = document.getElementById('tbody-pays');
+            tbody.innerHTML = '';
+            
+            if (pays.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucun pays enregistré</td></tr>';
+                return;
+            }
+            
+            pays.forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${p.code}</td>
+                    <td>${p.nom}</td>
+                    <td>${p.code_iso || '-'}</td>
+                    <td>
+                        <button onclick="deleteItem('pays', ${p.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function addPays(event) {
+            event.preventDefault();
+            const data = {
+                code: document.getElementById('pays-code').value.toUpperCase(),
+                nom: document.getElementById('pays-nom').value,
+                code_iso: document.getElementById('pays-code-iso').value.toUpperCase()
+            };
+            
+            try {
+                const response = await fetch('/api/pays', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Pays créé avec succès!');
+                    hideForm('pays');
+                    loadPays();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // DÉPARTEMENTS
+        async function loadDepartements() {
+            const response = await fetch('/api/departements');
+            const departements = await response.json();
+            const tbody = document.getElementById('tbody-departements');
+            tbody.innerHTML = '';
+            
+            if (departements.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucun département enregistré</td></tr>';
+                return;
+            }
+            
+            departements.forEach(d => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${d.pays_nom}</td>
+                    <td>${d.code}</td>
+                    <td>${d.nom}</td>
+                    <td>
+                        <button onclick="deleteItem('departements', ${d.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function addDepartement(event) {
+            event.preventDefault();
+            const data = {
+                pays_id: parseInt(document.getElementById('departement-pays-id').value),
+                code: document.getElementById('departement-code').value,
+                nom: document.getElementById('departement-nom').value
+            };
+            
+            try {
+                const response = await fetch('/api/departements', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Département créé avec succès!');
+                    hideForm('departements');
+                    loadDepartements();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // COMMUNES
+        async function loadCommunes() {
+            const response = await fetch('/api/communes');
+            const communes = await response.json();
+            const tbody = document.getElementById('tbody-communes');
+            tbody.innerHTML = '';
+            
+            if (communes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucune commune enregistrée</td></tr>';
+                return;
+            }
+            
+            communes.forEach(c => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${c.departement_nom}</td>
+                    <td>${c.code}</td>
+                    <td>${c.nom}</td>
+                    <td>
+                        <button onclick="deleteItem('communes', ${c.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function addCommune(event) {
+            event.preventDefault();
+            const data = {
+                departement_id: parseInt(document.getElementById('commune-departement-id').value),
+                code: document.getElementById('commune-code').value,
+                nom: document.getElementById('commune-nom').value
+            };
+            
+            try {
+                const response = await fetch('/api/communes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Commune créée avec succès!');
+                    hideForm('communes');
+                    loadCommunes();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // QUARTIERS/VILLAGES
+        async function loadQuartiersVillages() {
+            const response = await fetch('/api/quartiers-villages');
+            const quartiers = await response.json();
+            const tbody = document.getElementById('tbody-quartiers');
+            tbody.innerHTML = '';
+            
+            if (quartiers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">Aucun quartier/village enregistré</td></tr>';
+                return;
+            }
+            
+            quartiers.forEach(q => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${q.commune_nom}</td>
+                    <td>${q.type === 'quartier' ? '🏠 Quartier' : '🌾 Village'}</td>
+                    <td>${q.code}</td>
+                    <td>${q.nom}</td>
+                    <td>
+                        <button onclick="deleteItem('quartiers-villages', ${q.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function addQuartierVillage(event) {
+            event.preventDefault();
+            const data = {
+                commune_id: parseInt(document.getElementById('quartier-commune-id').value),
+                type: document.getElementById('quartier-type').value,
+                code: document.getElementById('quartier-code').value,
+                nom: document.getElementById('quartier-nom').value
+            };
+            
+            try {
+                const response = await fetch('/api/quartiers-villages', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Quartier/Village créé avec succès!');
+                    hideForm('quartiers');
+                    loadQuartiersVillages();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Supprimer un élément
+        async function deleteItem(type, id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément?')) {
+                return;
+            }
+            
+            let endpoint = type === 'quartiers-villages' ? 'quartiers-villages' : type;
+            if (type === 'taxes') endpoint = 'taxes';
+            if (type === 'instituts') endpoint = 'instituts';
+            if (type === 'marches') endpoint = 'marches';
+            try {
+                const response = await fetch(`/api/${endpoint}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('Élément supprimé avec succès!');
+                    loadData(type);
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Charger les instituts
+        async function loadInstituts() {
+            try {
+                const response = await fetch('/api/instituts');
+                const instituts = await response.json();
+                const tbody = document.getElementById('tbody-instituts');
+                tbody.innerHTML = '';
+                
+                if (instituts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Aucun institut enregistré</td></tr>';
+                    return;
+                }
+                
+                instituts.forEach(inst => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${inst.code}</strong></td>
+                        <td>${inst.nom}</td>
+                        <td>${inst.type || '-'}</td>
+                        <td>${inst.description || '-'}</td>
+                        <td>
+                            <button onclick="editInstitut(${inst.id})" class="btn-small">✏️</button>
+                            <button onclick="deleteItem('instituts', ${inst.id})" class="btn-small" style="background: #f44336;">🗑️</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        async function loadInstitutsForSelect(selectId) {
+            const response = await fetch('/api/instituts');
+            const instituts = await response.json();
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Sélectionner un institut</option>';
+            instituts.forEach(i => {
+                const option = document.createElement('option');
+                option.value = i.id;
+                option.textContent = `${i.nom} (${i.code})`;
+                select.appendChild(option);
+            });
+        }
+
+        async function addInstitut(event) {
+            event.preventDefault();
+            const data = {
+                code: document.getElementById('institut-code').value.trim().toUpperCase(),
+                nom: document.getElementById('institut-nom').value.trim(),
+                type: document.getElementById('institut-type').value,
+                description: document.getElementById('institut-description').value.trim()
+            };
+            
+            try {
+                const response = await fetch('/api/instituts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Institut créé avec succès!');
+                    hideForm('instituts');
+                    loadInstituts();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function editInstitut(id) {
+            try {
+                const response = await fetch(`/api/instituts/${id}`);
+                const inst = await response.json();
+                
+                document.getElementById('institut-code').value = inst.code;
+                document.getElementById('institut-nom').value = inst.nom;
+                document.getElementById('institut-type').value = inst.type || 'autre';
+                document.getElementById('institut-description').value = inst.description || '';
+                
+                showAddForm('instituts');
+                // TODO: Modifier pour gérer l'édition
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Charger les taxes
+        async function loadTaxes() {
+            try {
+                const response = await fetch('/api/taxes');
+                const taxes = await response.json();
+                const tbody = document.getElementById('tbody-taxes');
+                tbody.innerHTML = '';
+                
+                if (taxes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Aucune taxe enregistrée</td></tr>';
+                    return;
+                }
+                
+                taxes.forEach(t => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${t.institut_nom || '-'}</td>
+                        <td><strong>${t.code}</strong></td>
+                        <td>${t.nom}</td>
+                        <td>${t.montant_attendu.toLocaleString('fr-FR')} FCFA</td>
+                        <td>${t.periodicite || 'mensuel'}</td>
+                        <td>
+                            <button onclick="editTaxe(${t.id})" class="btn-small">✏️</button>
+                            <button onclick="deleteItem('taxes', ${t.id})" class="btn-small" style="background: #f44336;">🗑️</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        async function addTaxe(event) {
+            event.preventDefault();
+            const data = {
+                institut_id: parseInt(document.getElementById('taxe-institut-id').value),
+                code: document.getElementById('taxe-code').value.trim().toUpperCase(),
+                nom: document.getElementById('taxe-nom').value.trim(),
+                montant_attendu: parseFloat(document.getElementById('taxe-montant').value),
+                periodicite: document.getElementById('taxe-periodicite').value,
+                description: document.getElementById('taxe-description').value.trim()
+            };
+            
+            try {
+                const response = await fetch('/api/taxes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Taxe créée avec succès!');
+                    hideForm('taxes');
+                    loadTaxes();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function editTaxe(id) {
+            try {
+                const response = await fetch(`/api/taxes/${id}`);
+                const taxe = await response.json();
+                
+                document.getElementById('taxe-institut-id').value = taxe.institut_id;
+                document.getElementById('taxe-code').value = taxe.code;
+                document.getElementById('taxe-nom').value = taxe.nom;
+                document.getElementById('taxe-montant').value = taxe.montant_attendu;
+                document.getElementById('taxe-periodicite').value = taxe.periodicite || 'mensuel';
+                document.getElementById('taxe-description').value = taxe.description || '';
+                
+                loadInstitutsForSelect('taxe-institut-id');
+                showAddForm('taxes');
+                // TODO: Modifier pour gérer l'édition
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Charger les marchés
+        async function loadTypesCommerce() {
+            try {
+                const response = await fetch('/api/types-commerce');
+                const types = await response.json();
+                const tbody = document.getElementById('tbody-types-commerce');
+                tbody.innerHTML = '';
+
+                if (types.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucun type de commerce enregistré</td></tr>';
+                    return;
+                }
+
+                types.forEach(t => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${t.code}</strong></td>
+                        <td>${t.nom}</td>
+                        <td>${t.description || '-'}</td>
+                        <td>
+                            <button onclick="editTypeCommerce(${t.id})" class="btn-small">✏️</button>
+                            <button onclick="deleteItem('types-commerce', ${t.id})" class="btn-small" style="background: #f44336;">🗑️</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        async function addTypeCommerce(event) {
+            event.preventDefault();
+            
+            const code = document.getElementById('type-commerce-code').value.trim().toUpperCase();
+            const nom = document.getElementById('type-commerce-nom').value.trim();
+            
+            if (!code || !nom) {
+                alert('Le code et le nom sont requis!');
+                return;
+            }
+            
+            const data = {
+                code: code,
+                nom: nom,
+                description: document.getElementById('type-commerce-description').value.trim()
+            };
+            
+            try {
+                const response = await fetch('/api/types-commerce', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const responseData = await response.json();
+                
+                if (response.ok) {
+                    alert('Type de commerce créé avec succès!');
+                    hideForm('types-commerce');
+                    loadTypesCommerce();
+                } else {
+                    const errorMsg = responseData.error || responseData.message || 'Erreur inconnue';
+                    alert('Erreur: ' + errorMsg);
+                    console.error('Erreur API:', responseData);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+                console.error('Erreur lors de la création du type de commerce:', error);
+            }
+        }
+
+        async function editTypeCommerce(id) {
+            try {
+                const response = await fetch(`/api/types-commerce/${id}`);
+                const type = await response.json();
+                
+                document.getElementById('type-commerce-code').value = type.code;
+                document.getElementById('type-commerce-nom').value = type.nom;
+                document.getElementById('type-commerce-description').value = type.description || '';
+                
+                document.getElementById('form-types-commerce').dataset.editingId = id;
+                document.getElementById('form-types-commerce').querySelector('h3').textContent = 'Modifier le Type de Commerce';
+                document.getElementById('form-types-commerce').querySelector('form').onsubmit = (e) => updateTypeCommerce(e, id);
+                showAddForm('types-commerce');
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function updateTypeCommerce(event, id) {
+            event.preventDefault();
+            
+            const code = document.getElementById('type-commerce-code').value.trim().toUpperCase();
+            const nom = document.getElementById('type-commerce-nom').value.trim();
+            
+            if (!code || !nom) {
+                alert('Le code et le nom sont requis!');
+                return;
+            }
+            
+            const data = {
+                code: code,
+                nom: nom,
+                description: document.getElementById('type-commerce-description').value.trim()
+            };
+            
+            try {
+                const response = await fetch(`/api/types-commerce/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Type de commerce modifié avec succès!');
+                    hideForm('types-commerce');
+                    loadTypesCommerce();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + error.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function loadMarches() {
+            try {
+                const response = await fetch('/api/marches');
+                const marches = await response.json();
+                const tbody = document.getElementById('tbody-marches');
+                tbody.innerHTML = '';
+                
+                if (marches.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Aucun marché enregistré</td></tr>';
+                    return;
+                }
+                
+                marches.forEach(m => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${m.code}</strong></td>
+                        <td>${m.nom}</td>
+                        <td>${m.quartier_nom || '-'}</td>
+                        <td>${m.commune_nom || '-'}</td>
+                        <td>${m.adresse || '-'}</td>
+                        <td>
+                            <button onclick="editMarche(${m.id})" class="btn-small">✏️</button>
+                            <button onclick="deleteItem('marches', ${m.id})" class="btn-small" style="background: #f44336;">🗑️</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        async function addMarche(event) {
+            event.preventDefault();
+            
+            console.log('Tentative de création d\'un marché...');
+            
+            const codeEl = document.getElementById('marche-code');
+            const nomEl = document.getElementById('marche-nom');
+            
+            if (!codeEl || !nomEl) {
+                alert('Erreur: Les champs du formulaire ne sont pas trouvés!');
+                console.error('Champs manquants:', { codeEl, nomEl });
+                return;
+            }
+            
+            const code = codeEl.value.trim();
+            const nom = nomEl.value.trim();
+            
+            console.log('Données saisies:', { code, nom });
+            
+            if (!code || !nom) {
+                alert('Le code et le nom sont requis!');
+                return;
+            }
+            
+            const data = {
+                code: code,
+                nom: nom
+            };
+            
+            const adresse = document.getElementById('marche-adresse').value.trim();
+            if (adresse) {
+                data.adresse = adresse;
+            }
+            
+            const description = document.getElementById('marche-description').value.trim();
+            if (description) {
+                data.description = description;
+            }
+            
+            const quartierId = document.getElementById('marche-quartier-id').value;
+            if (quartierId) {
+                data.quartier_village_id = parseInt(quartierId);
+            }
+            
+            console.log('Données à envoyer:', data);
+            
+            try {
+                const response = await fetch('/api/marches', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Réponse reçue:', response.status, response.statusText);
+                
+                let responseData;
+                try {
+                    responseData = await response.json();
+                } catch (e) {
+                    const text = await response.text();
+                    console.error('Réponse non-JSON:', text);
+                    alert('Erreur: Réponse invalide du serveur');
+                    return;
+                }
+                
+                console.log('Données de réponse:', responseData);
+                
+                if (response.ok) {
+                    alert('Marché créé avec succès!');
+                    hideForm('marches');
+                    await loadMarches();
+                } else {
+                    const errorMsg = responseData.error || responseData.message || 'Erreur inconnue';
+                    alert('Erreur: ' + errorMsg);
+                    console.error('Erreur API:', responseData);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+                console.error('Erreur lors de la création du marché:', error);
+            }
+        }
+
+        async function editMarche(id) {
+            try {
+                const response = await fetch(`/api/marches/${id}`);
+                const marche = await response.json();
+                
+                document.getElementById('marche-code').value = marche.code;
+                document.getElementById('marche-nom').value = marche.nom;
+                document.getElementById('marche-adresse').value = marche.adresse || '';
+                document.getElementById('marche-description').value = marche.description || '';
+                
+                loadQuartiersVillagesForSelect('marche-quartier-id');
+                if (marche.quartier_village_id) {
+                    document.getElementById('marche-quartier-id').value = marche.quartier_village_id;
+                }
+                
+                showAddForm('marches');
+                // TODO: Modifier pour gérer l'édition
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function loadRepartition() {
+            try {
+                const response = await fetch('/api/configurations');
+                const configs = await response.json();
+                const instEl = document.getElementById('repartition-institution');
+                const partEl = document.getElementById('repartition-partenaire');
+                const mtnEl = document.getElementById('repartition-mtn');
+                if (instEl) instEl.value = configs.repartition_institution?.valeur || 80;
+                if (partEl) partEl.value = configs.repartition_partenaire_technique?.valeur || 17;
+                if (mtnEl) mtnEl.value = configs.repartition_mtn?.valeur || 3;
+                [instEl, partEl, mtnEl].forEach(el => {
+                    if (el) el.oninput = updateRepartitionTotal;
+                });
+                updateRepartitionTotal();
+            } catch (e) {
+                console.error('Erreur chargement répartition:', e);
+            }
+        }
+
+        function updateRepartitionTotal() {
+            const instEl = document.getElementById('repartition-institution');
+            const partEl = document.getElementById('repartition-partenaire');
+            const mtnEl = document.getElementById('repartition-mtn');
+            if (!instEl || !partEl || !mtnEl) return;
+            const inst = parseFloat(instEl.value) || 0;
+            const part = parseFloat(partEl.value) || 0;
+            const mtn = parseFloat(mtnEl.value) || 0;
+            const total = inst + part + mtn;
+            const el = document.getElementById('repartitionTotal');
+            if (el) {
+                el.textContent = `Total: ${total}%`;
+                el.className = 'repartition-total' + (Math.abs(total - 100) < 0.01 ? ' ok' : ' error');
+            }
+        }
+
+        async function saveRepartition(e) {
+            e.preventDefault();
+            const inst = parseFloat(document.getElementById('repartition-institution').value);
+            const part = parseFloat(document.getElementById('repartition-partenaire').value);
+            const mtn = parseFloat(document.getElementById('repartition-mtn').value);
+            if (Math.abs(inst + part + mtn - 100) > 0.01) {
+                alert('La somme des pourcentages doit être égale à 100%');
+                return;
+            }
+            try {
+                await fetch('/api/configurations', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        repartition_institution: inst,
+                        repartition_partenaire_technique: part,
+                        repartition_mtn: mtn
+                    })
+                });
+                alert('Répartition enregistrée avec succès');
+            } catch (err) {
+                alert('Erreur: ' + err.message);
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPays();
+        });
+    </script>
+</body>
+</html>
+

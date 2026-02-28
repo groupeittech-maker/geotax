@@ -1,0 +1,6 @@
+<nav>
+    {% for url, label in nav_items %}
+    <a href="{{ url }}" {% if request.path == url or (url != '/' and request.path.startswith(url)) %}class="active"{% endif %}>{{ label }}</a>
+    {% endfor %}
+    <a href="{{ url_for('logout_page') }}" class="btn btn-secondary" style="margin-left: auto;">Déconnexion</a>
+</nav>

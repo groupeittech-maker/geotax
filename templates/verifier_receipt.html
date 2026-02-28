@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification reçu - {{ paiement.numero_transaction or paiement.reference_transaction }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; max-width: 500px; margin: 0 auto; }
+        .verify-card { border: 2px solid #009e60; border-radius: 12px; padding: 28px; background: #f8fff9; }
+        .badge { display: inline-block; background: #009e60; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 700; margin-bottom: 20px; }
+        .numero { font-size: 1.2rem; font-weight: 800; color: #009e60; margin: 16px 0; }
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
+        .row .label { color: #666; }
+        .row .value { font-weight: 600; }
+        .montant { font-size: 1.5rem; font-weight: 800; color: #009e60; text-align: center; margin: 16px 0; }
+        .footer { margin-top: 20px; font-size: 0.85rem; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="verify-card">
+        <div class="badge">✓ REÇU VALIDE</div>
+        <h2 style="color: #009e60; margin-bottom: 8px;">Reçu vérifié</h2>
+        <p style="color: #666; font-size: 0.95rem;">Ce reçu de paiement fiscal a été vérifié dans le système.</p>
+        
+        <div class="numero">{{ paiement.numero_transaction or paiement.reference_transaction or 'N/A' }}</div>
+        
+        <div class="row">
+            <span class="label">Commerce</span>
+            <span class="value">{{ paiement.boutique.nom if paiement.boutique else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Code</span>
+            <span class="value">{{ paiement.boutique.code_unique if paiement.boutique else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Institution</span>
+            <span class="value">{{ paiement.institut.nom if paiement.institut else 'N/A' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Taxe</span>
+            <span class="value">{{ paiement.taxe.nom if paiement.taxe else 'Taxe générale' }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Période</span>
+            <span class="value">{{ mois_noms[paiement.mois - 1] }} {{ paiement.annee }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Date paiement</span>
+            <span class="value">{{ paiement.date_paiement.strftime('%d/%m/%Y') if paiement.date_paiement else 'N/A' }}</span>
+        </div>
+        
+        <div class="montant">{{ "{:,.0f}".format(paiement.montant).replace(",", " ") }} FCFA</div>
+        
+        <div class="footer">
+            République du Congo - Système de Paiement des Taxes
+        </div>
+    </div>
+</body>
+</html>
