@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoTax — La plateforme de référencement et de recouvrement des taxes locales</title>
-    <meta name="description" content="Recensez vos contribuables, facilitez le paiement et maîtrisez vos recettes locales grâce à un référentiel géographique unique.">
+    <title>GeoTax — Plateforme de connaissance territoriale</title>
+    <meta name="description" content="Recensez, géolocalisez, structurez et analysez votre territoire. La plateforme qui transforme les données de terrain en indicateurs et en décisions.">
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap">
@@ -92,15 +92,15 @@
             padding: 4.5rem 0 5rem;
         }
         .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 3rem; align-items: center; }
-        .hero h1 { font-size: clamp(2.1rem, 4.5vw, 3.3rem); font-weight: 700; }
+        .hero h1 { font-size: clamp(2rem, 4.2vw, 3.1rem); font-weight: 700; }
         .hero h1 em { font-style: normal; color: var(--green); }
-        .hero .lead { margin: 1.1rem 0 1.6rem; }
-        .hero-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.8rem; }
-        .hero-args { display: grid; gap: 0.7rem; }
-        .hero-arg { display: flex; gap: 0.75rem; align-items: flex-start; }
-        .hero-arg .ico { font-size: 1.3rem; line-height: 1.3; }
-        .hero-arg strong { display: block; }
-        .hero-arg span { color: var(--text-2); font-size: 0.9rem; }
+        .hero .lead { margin: 1.1rem 0 0.9rem; }
+        .hero-verbs {
+            font-weight: 700; color: var(--green); font-size: 0.98rem;
+            letter-spacing: 0.02em; margin-bottom: 1rem;
+        }
+        .hero-sub { color: var(--text-2); font-size: 0.95rem; margin-bottom: 1.6rem; max-width: 52ch; }
+        .hero-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
 
         /* Fake map visual */
         .mapmock {
@@ -137,6 +137,8 @@
         /* ---------- Generic blocks ---------- */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+        .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
         .card {
             background: var(--card); border: 1px solid var(--border);
             border-radius: var(--radius); padding: 1.4rem;
@@ -144,31 +146,32 @@
         }
         .card .ico { font-size: 1.6rem; }
         .card h3 { margin: 0.5rem 0 0.35rem; }
-        .card p { color: var(--text-2); font-size: 0.92rem; }
-        .list-check { list-style: none; margin-top: 1rem; }
-        .list-check li { padding: 0.3rem 0 0.3rem 1.6rem; position: relative; color: var(--text-2); }
+        .card p, .card li { color: var(--text-2); font-size: 0.92rem; }
+        .list-check { list-style: none; margin-top: 0.6rem; }
+        .list-check li { padding: 0.22rem 0 0.22rem 1.5rem; position: relative; color: var(--text-2); }
         .list-check li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 700; }
         .list-cross li::before { content: "✕"; color: var(--red); }
+        .list-plain { list-style: none; margin-top: 0.5rem; }
+        .list-plain li { padding: 0.22rem 0; color: var(--text-2); font-size: 0.92rem; }
         .alt { background: #fff; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
         .dark { background: var(--green-darker); color: #e8f2ec; }
         .dark h2, .dark h3 { color: #fff; }
-        .dark .lead, .dark .muted { color: #a8c4b2; }
+        .dark .lead, .dark .muted, .dark li, .dark .card p { color: #a8c4b2; }
         .dark .kicker { background: rgba(255,255,255,.08); color: var(--yellow); border-color: rgba(255,255,255,.15); }
+        .dark .card { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+        .dark .card h3 { color: #fff; }
 
-        /* POI comparison */
-        .poi-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin-top: 1.8rem; }
-        .poi-col { border-radius: var(--radius); padding: 1.6rem; border: 1px solid var(--border); }
-        .poi-col.contrib { background: linear-gradient(160deg, #fff, var(--green-soft)); }
-        .poi-col.infra { background: linear-gradient(160deg, #fff, #dfeaf5); }
-        .poi-col h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; }
-        .poi-col ul { list-style: none; }
-        .poi-col li { padding: 0.25rem 0; color: var(--text-2); font-size: 0.94rem; }
-        .poi-col .tag { display: inline-block; margin-top: 0.8rem; font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 9999px; }
-        .contrib .tag { background: var(--green); color: #fff; }
-        .infra .tag { background: var(--blue); color: #fff; }
-        .keymsg {
-            margin-top: 1.6rem; text-align: center; font-size: 1.1rem; font-weight: 600; color: var(--green-darker);
+        /* Pillars (Recenser → Décider) */
+        .pillars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-top: 1.8rem; }
+        .pillar { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.3rem 1rem; }
+        .pillar .num {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--green); color: #fff; font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center; margin-bottom: 0.6rem;
         }
+        .pillar h3 { font-size: 1rem; margin-bottom: 0.4rem; }
+        .pillar p, .pillar li { font-size: 0.82rem; color: var(--text-2); }
+        .pillar ul { list-style: none; }
 
         /* Steps */
         .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.8rem; margin-top: 1.8rem; }
@@ -180,67 +183,49 @@
         }
         .step h3 { font-size: 0.9rem; margin-bottom: 0.25rem; }
         .step p { font-size: 0.78rem; color: var(--text-2); }
+        .dark .step { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+        .dark .step .num { background: var(--yellow); color: var(--green-darker); }
+        .dark .step p { color: #a8c4b2; }
         .tracebox {
             margin-top: 1.4rem; background: var(--yellow-soft); border: 1px solid #e8d68a;
             border-radius: 0.8rem; padding: 0.9rem 1.2rem; font-weight: 600; color: #6b5a00; text-align: center;
         }
 
-        /* Code / example card */
-        .poi-card {
-            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-            padding: 1.4rem; font-size: 0.92rem; box-shadow: 0 6px 20px rgba(6,47,29,.09);
+        /* Concept deux familles */
+        .poi-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin-top: 1.8rem; }
+        .poi-col { border-radius: var(--radius); padding: 1.6rem; border: 1px solid var(--border); }
+        .poi-col.contrib { background: linear-gradient(160deg, #fff, var(--green-soft)); }
+        .poi-col.infra { background: linear-gradient(160deg, #fff, #dfeaf5); }
+        .poi-col h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; }
+        .poi-col ul { list-style: none; }
+        .poi-col li { padding: 0.25rem 0; color: var(--text-2); font-size: 0.94rem; }
+        .poi-col .chain {
+            display: block; margin-top: 0.7rem; font-size: 0.85rem; font-weight: 600;
+            color: var(--green-darker); background: rgba(255,255,255,.7);
+            border-radius: 0.6rem; padding: 0.55rem 0.8rem;
         }
-        .poi-card .code { font-weight: 700; color: var(--green); font-size: 1.05rem; }
-        .poi-card dl { margin-top: 0.6rem; }
-        .poi-card dt { color: var(--text-3); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
-        .poi-card dd { margin-bottom: 0.45rem; }
-        .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
-        .badge.ok { background: var(--green-soft); color: var(--green); }
-        .badge.part { background: #fde8d4; color: var(--orange); }
-        .badge.late { background: var(--red-soft); color: var(--red); }
-        .badge.blue { background: #dfeaf5; color: var(--blue); }
-        .ussd {
-            display: inline-block; font-family: ui-monospace, monospace; font-size: 1.05rem;
-            background: var(--green-darker); color: var(--yellow); border-radius: 0.6rem;
-            padding: 0.55rem 1.1rem; margin-top: 0.5rem;
+        .poi-col .tag { display: inline-block; margin-top: 0.8rem; font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 9999px; }
+        .contrib .tag { background: var(--green); color: #fff; }
+        .infra .tag { background: var(--blue); color: #fff; }
+        .keymsg {
+            margin-top: 1.6rem; text-align: center; font-size: 1.1rem; font-weight: 600; color: var(--green-darker);
         }
+        .dark .keymsg { color: var(--yellow); }
 
-        /* KPI */
-        .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin: 1.8rem 0; }
-        .kpi { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; text-align: center; }
-        .kpi b { display: block; font-size: 1.7rem; color: var(--green-darker); }
-        .kpi span { font-size: 0.8rem; color: var(--text-2); }
-        .dark .kpi { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
-        .dark .kpi b { color: var(--yellow); }
-        .dark .kpi span { color: #a8c4b2; }
+        /* Métiers */
+        .metier { border-top: 4px solid var(--green); }
+        .metier h3 { display: flex; align-items: center; gap: 0.5rem; }
+        .metier .sub { font-size: 0.82rem; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.3rem 0 0.5rem; }
 
-        /* Workflow */
-        .flow { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 1.6rem 0; }
-        .flow span {
-            background: var(--green); color: #fff; font-weight: 600; font-size: 0.85rem;
-            padding: 0.5rem 1rem; border-radius: 9999px;
-        }
-        .flow i { align-self: center; color: var(--text-3); font-style: normal; }
-        .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1.4rem; }
-        .branch { border-radius: var(--radius); padding: 1.4rem; text-align: center; }
-        .branch.contrib { background: var(--green); color: #fff; }
-        .branch.infra { background: var(--blue); color: #fff; }
-        .branch h3 { color: #fff; margin-bottom: 0.3rem; }
-        .branch p { font-size: 0.9rem; opacity: .9; }
-        .branch-merge {
-            margin-top: 1.2rem; text-align: center; font-weight: 700; color: var(--green-darker);
-            background: var(--yellow-soft); border-radius: var(--radius); padding: 1rem;
-        }
-
-        /* Before / After */
-        .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin-top: 1.6rem; }
-        .ba .card.before { border-top: 4px solid var(--red); }
-        .ba .card.after { border-top: 4px solid var(--green); }
+        /* Fiches exemples */
+        .fiche { border-top: 4px solid var(--yellow); }
+        .fiche h3 { color: var(--green-darker); }
 
         /* CTA final */
         .cta-final { text-align: center; padding: 5rem 0; }
         .cta-final h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); }
         .cta-final .lead { margin: 1rem auto 2rem; }
+        .cta-verbs { font-weight: 700; color: var(--green); letter-spacing: 0.04em; margin-bottom: 1.4rem; }
 
         footer {
             background: var(--green-darker); color: #a8c4b2; padding: 2rem 0;
@@ -249,21 +234,21 @@
         footer .wrap { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
         footer a { color: #d4e8dd; text-decoration: none; }
         footer a:hover { color: var(--yellow); }
+        footer .brand { color: #fff; }
         footer .right { margin-left: auto; display: flex; gap: 1.2rem; }
 
         @media (max-width: 900px) {
-            .hero-grid, .grid-2, .poi-cols, .ba, .branches { grid-template-columns: 1fr; }
-            .grid-3 { grid-template-columns: 1fr 1fr; }
+            .hero-grid, .grid-2, .poi-cols { grid-template-columns: 1fr; }
+            .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+            .grid-5, .pillars { grid-template-columns: repeat(2, 1fr); }
             .steps { grid-template-columns: repeat(3, 1fr); }
-            .kpis { grid-template-columns: repeat(2, 1fr); }
             .nav-links { display: none; }
             .mapmock-body { grid-template-columns: 1fr; }
             .mapmock-side { flex-direction: row; flex-wrap: wrap; border-left: none; border-top: 1px solid var(--border); }
             .mini-kpi { flex: 1 1 40%; }
         }
         @media (max-width: 560px) {
-            .grid-3, .steps { grid-template-columns: 1fr; }
-            .kpis { grid-template-columns: 1fr 1fr; }
+            .grid-3, .grid-4, .grid-5, .pillars, .steps { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -274,11 +259,11 @@
     <div class="wrap">
         <a class="brand" href="/"><span class="brand-mark">GT</span> GeoTax</a>
         <div class="nav-links">
-            <a href="#concept">Concept</a>
-            <a href="#collecte">Collecte</a>
-            <a href="#paiement">Paiement</a>
-            <a href="#pilotage">Pilotage</a>
-            <a href="#commercant">Contribuable</a>
+            <a href="#promesse">Plateforme</a>
+            <a href="#metiers">Métiers</a>
+            <a href="#analyse">Analyse</a>
+            <a href="#terrain">Terrain</a>
+            <a href="#collectivites">Collectivités</a>
         </div>
         <a href="/login" class="btn btn-primary btn-sm">Connexion</a>
     </div>
@@ -288,21 +273,21 @@
 <header class="hero">
     <div class="wrap hero-grid">
         <div>
-            <span class="kicker">La plateforme de référencement et de recouvrement des taxes locales</span>
-            <h1>Connaître votre territoire.<br>Faciliter le recouvrement.<br><em>Maîtriser vos recettes.</em></h1>
+            <span class="kicker">Plateforme de connaissance territoriale</span>
+            <h1>Maîtrisez votre territoire.<br><em>Décidez avec vos données.</em></h1>
             <p class="lead">
-                GeoTax permet aux collectivités de recenser et géolocaliser leurs
-                contribuables, d'affecter les taxes locales, de faciliter leur paiement
-                et de suivre le recouvrement depuis une plateforme unique.
+                La plateforme qui transforme les données de terrain en information
+                géographique, indicateurs et décisions.
+            </p>
+            <p class="hero-verbs">Recensez · Géolocalisez · Structurez · Analysez · Décidez</p>
+            <p class="hero-sub">
+                Une plateforme conçue pour les collectivités, entreprises et organisations
+                qui ont besoin de connaître précisément leurs activités, leurs actifs,
+                leurs infrastructures et leur territoire.
             </p>
             <div class="hero-cta">
                 <a href="/login" class="btn btn-primary">Demander une démonstration</a>
-                <a href="/login" class="btn btn-outline">Voir GeoTax en action →</a>
-            </div>
-            <div class="hero-args">
-                <div class="hero-arg"><span class="ico">📍</span><div><strong>Référentiel géographique</strong><span>Chaque contribuable et infrastructure est localisé.</span></div></div>
-                <div class="hero-arg"><span class="ico">💰</span><div><strong>Recouvrement digitalisé</strong><span>Taxes, paiements Mobile Money, USSD et reçus vérifiables.</span></div></div>
-                <div class="hero-arg"><span class="ico">📊</span><div><strong>Pilotage en temps réel</strong><span>Recettes, impayés et couverture fiscale en un coup d'œil.</span></div></div>
+                <a href="/login" class="btn btn-outline">Voir la plateforme en action →</a>
             </div>
         </div>
         <div class="mapmock" aria-hidden="true">
@@ -310,7 +295,7 @@
                 <span class="dot" style="background:var(--red)"></span>
                 <span class="dot" style="background:var(--yellow)"></span>
                 <span class="dot" style="background:var(--green)"></span>
-                &nbsp;Carte fiscale — GeoTax
+                &nbsp;Carte territoriale — GeoTax
             </div>
             <div class="mapmock-body">
                 <div class="mapmock-map">
@@ -328,17 +313,17 @@
                     <span class="pin infra" style="top:82%;left:75%"></span>
                 </div>
                 <div class="mapmock-side">
-                    <div class="mini-kpi"><b>12 458</b><span>Contribuables recensés</span></div>
-                    <div class="mini-kpi"><b>8 920</b><span>À jour</span></div>
-                    <div class="mini-kpi"><b>2 314</b><span>Impayés</span></div>
-                    <div class="mini-kpi"><b>125 M</b><span>FCFA collectés</span></div>
+                    <div class="mini-kpi"><b>12 458</b><span>Éléments recensés</span></div>
+                    <div class="mini-kpi"><b>8 920</b><span>Validés</span></div>
+                    <div class="mini-kpi"><b>2 314</b><span>En attente</span></div>
+                    <div class="mini-kpi"><b>742</b><span>Activités / zone</span></div>
                     <div class="mini-kpi"><b>3 842</b><span>Infrastructures</span></div>
                 </div>
             </div>
             <div class="legend">
-                <span><i style="background:var(--green)"></i>À jour</span>
-                <span><i style="background:var(--orange)"></i>Partiel</span>
-                <span><i style="background:var(--red)"></i>Impayé</span>
+                <span><i style="background:var(--green)"></i>Validé</span>
+                <span><i style="background:var(--orange)"></i>En validation</span>
+                <span><i style="background:var(--red)"></i>À contrôler</span>
                 <span><i style="background:var(--blue);border-radius:2px"></i>Infrastructure</span>
             </div>
         </div>
@@ -350,308 +335,379 @@
     <div class="wrap">
         <div class="center" style="max-width:720px;margin:0 auto">
             <span class="kicker">Le constat</span>
-            <h2>Connaissez-vous réellement votre potentiel fiscal&nbsp;?</h2>
-            <p class="lead">Dans de nombreuses collectivités, les données sont dispersées :</p>
+            <h2>Vous avez des données. Mais les exploitez-vous réellement&nbsp;?</h2>
+            <p class="lead">Vos informations sont souvent dispersées entre fichiers Excel, registres papier, bases de données, photos terrain, coordonnées GPS, documents administratifs et différents services.</p>
         </div>
         <div class="grid-3" style="margin-top:2rem">
-            <div class="card"><span class="ico">📄</span><h3>Données éclatées</h3><p>Registres papier, fichiers Excel, données fiscales séparées des données géographiques.</p></div>
-            <div class="card"><span class="ico">❓</span><h3>Contribuables introuvables</h3><p>Des contribuables difficiles à localiser et des paiements impossibles à contrôler efficacement.</p></div>
-            <div class="card"><span class="ico">🕳️</span><h3>Aucune vision consolidée</h3><p>Pas de vue d'ensemble du recouvrement ; les agents vérifient chaque situation manuellement.</p></div>
+            <div class="card"><span class="ico">🗂️</span><h3>Informations éclatées</h3><p>Chaque service détient une partie de la réalité, dans des formats et des outils différents.</p></div>
+            <div class="card"><span class="ico">❓</span><h3>Vision incomplète</h3><p>Difficile de savoir où sont les éléments, ce qu'ils représentent, à qui ils appartiennent.</p></div>
+            <div class="card"><span class="ico">📉</span><h3>Données inexploitées</h3><p>Sans contexte géographique, les informations ne révèlent pas ce qu'elles pourraient dire.</p></div>
         </div>
         <p class="keymsg">
-            GeoTax transforme cette réalité&nbsp;: un territoire → un référentiel → des contribuables
-            identifiés → des taxes affectées → des paiements tracés → des données exploitables.
+            La plateforme centralise ces informations et les replace dans leur contexte géographique.
         </p>
     </div>
 </section>
 
-<!-- ==================== CONCEPT POI ==================== -->
-<section id="concept" class="alt">
+<!-- ==================== LA PROMESSE ==================== -->
+<section id="promesse" class="alt">
+    <div class="wrap">
+        <div class="center" style="max-width:760px;margin:0 auto">
+            <span class="kicker">La promesse</span>
+            <h2>Une seule plateforme pour connaître, cartographier et analyser votre territoire</h2>
+        </div>
+        <div class="pillars">
+            <div class="pillar">
+                <div class="num">1</div>
+                <h3>Recenser</h3>
+                <ul>
+                    <li>Identité &amp; catégorie</li>
+                    <li>Coordonnées GPS</li>
+                    <li>Photos &amp; documents</li>
+                    <li>Champs métier</li>
+                </ul>
+            </div>
+            <div class="pillar">
+                <div class="num">2</div>
+                <h3>Géolocaliser</h3>
+                <ul>
+                    <li>Point</li>
+                    <li>Ligne</li>
+                    <li>Polygone</li>
+                    <li>Périmètre</li>
+                </ul>
+            </div>
+            <div class="pillar">
+                <div class="num">3</div>
+                <h3>Structurer</h3>
+                <ul>
+                    <li>Pays → Département</li>
+                    <li>Commune → Quartier</li>
+                    <li>Catégories métier</li>
+                    <li>Référentiel propre</li>
+                </ul>
+            </div>
+            <div class="pillar">
+                <div class="num">4</div>
+                <h3>Analyser</h3>
+                <ul>
+                    <li>Statistiques</li>
+                    <li>Indicateurs</li>
+                    <li>Tableaux de bord</li>
+                    <li>Exports</li>
+                </ul>
+            </div>
+            <div class="pillar">
+                <div class="num">5</div>
+                <h3>Décider</h3>
+                <ul>
+                    <li>Analyses par zone</li>
+                    <li>Comparaisons</li>
+                    <li>Connaissance opérationnelle du territoire</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== MÉTIERS ==================== -->
+<section id="metiers">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto 2rem">
+            <span class="kicker">Multi-métiers</span>
+            <h2>Un même référentiel. Plusieurs usages.</h2>
+        </div>
+        <div class="grid-3">
+            <div class="card metier">
+                <h3>🏛️ Collectivités</h3>
+                <p class="sub">Recensement &amp; recettes locales</p>
+                <ul class="list-check">
+                    <li>Identifier les contribuables</li>
+                    <li>Géolocaliser les activités</li>
+                    <li>Faciliter le recouvrement</li>
+                    <li>Contrôler les situations</li>
+                    <li>Analyser les recettes par zone</li>
+                </ul>
+            </div>
+            <div class="card metier">
+                <h3>🏦 Banques &amp; finance</h3>
+                <p class="sub">Développement du réseau</p>
+                <ul class="list-check">
+                    <li>Agences, GAB, points de service</li>
+                    <li>Analyse des zones de chalandise</li>
+                    <li>Activités économiques</li>
+                    <li>Études d'implantation</li>
+                </ul>
+            </div>
+            <div class="card metier">
+                <h3>📡 Télécoms &amp; infrastructures</h3>
+                <p class="sub">Actifs &amp; environnement</p>
+                <ul class="list-check">
+                    <li>Pylônes, réseaux, pipelines</li>
+                    <li>Équipements, points techniques</li>
+                    <li>Zones de couverture</li>
+                    <li>Infrastructures à proximité</li>
+                </ul>
+            </div>
+            <div class="card metier">
+                <h3>🏢 Entreprises &amp; commerce</h3>
+                <p class="sub">Intelligence commerciale</p>
+                <ul class="list-check">
+                    <li>Points de vente, distributeurs</li>
+                    <li>Concurrents, clients, prospects</li>
+                    <li>Zones d'activité</li>
+                    <li>Implantation commerciale</li>
+                </ul>
+            </div>
+            <div class="card metier">
+                <h3>🏗️ Foncier &amp; immobilier</h3>
+                <p class="sub">Terrains &amp; actifs</p>
+                <ul class="list-check">
+                    <li>Parcelles, bâtiments, terrains</li>
+                    <li>Occupation &amp; historique</li>
+                    <li>Documents associés</li>
+                    <li>Environnement immédiat</li>
+                </ul>
+            </div>
+            <div class="card metier">
+                <h3>🗺️ Études &amp; organisations</h3>
+                <p class="sub">Connaissance du terrain</p>
+                <ul class="list-check">
+                    <li>Enquêtes géoréférencées</li>
+                    <li>Cartographie thématique</li>
+                    <li>Indicateurs territoriaux</li>
+                    <li>Exports &amp; rapports</li>
+                </ul>
+            </div>
+        </div>
+        <p class="keymsg">
+            La plateforme ne remplace pas vos métiers&nbsp;: elle fournit l'outil de connaissance,
+            de recensement et de pilotage.
+        </p>
+    </div>
+</section>
+
+<!-- ==================== CONCEPT CLÉ ==================== -->
+<section id="concept" class="dark">
     <div class="wrap">
         <div class="center" style="max-width:720px;margin:0 auto">
-            <span class="kicker">Le concept central</span>
-            <h2>Un seul référentiel géographique pour tout votre territoire</h2>
-            <p class="lead">GeoTax transforme les éléments du territoire en <strong>POI</strong> — Points of Interest géoréférencés — répartis en deux catégories.</p>
+            <span class="kicker">Le concept clé</span>
+            <h2>Tout ce qui existe sur votre territoire peut devenir une donnée exploitable</h2>
+            <p class="lead">La plateforme distingue deux grandes familles d'objets géographiques.</p>
         </div>
         <div class="poi-cols">
             <div class="poi-col contrib">
                 <h3>🏪 Contribuable</h3>
-                <ul>
-                    <li>Commerce, boutique, activité professionnelle</li>
-                    <li>Marché, établissement fiscalisé</li>
-                    <li>Identifiant unique + QR fiscal</li>
-                    <li>Taxes affectées selon l'activité</li>
-                    <li>Paiements suivis et contrôlés</li>
-                </ul>
-                <span class="tag">Paie des taxes</span>
+                <p class="muted" style="color:var(--text-2)">Un objet économique ou une activité soumis à une obligation.</p>
+                <span class="chain">Commerce → propriétaire → activité → taxe → paiement → historique</span>
+                <span class="tag">Soumis à obligation</span>
             </div>
             <div class="poi-col infra">
                 <h3>🏗️ Infrastructure</h3>
-                <ul>
-                    <li>Pylône, pipeline, parcelle, périmètre</li>
-                    <li>Équipements et patrimoine géoréférencés</li>
-                    <li>Géométries : points, lignes, surfaces</li>
-                    <li>Données techniques personnalisées</li>
-                    <li>Cartographie et statistiques territoriales</li>
-                </ul>
-                <span class="tag">Référentiel territorial</span>
+                <p class="muted" style="color:var(--text-2)">Un objet géographique utilisé comme référence ou actif.</p>
+                <span class="chain">Pylône → coordonnées → hauteur → opérateur → couverture</span>
+                <span class="chain">Parcelle → superficie → propriétaire → occupation → documents</span>
+                <span class="chain">Pipeline → tracé → longueur → zones traversées</span>
+                <span class="tag">Référence &amp; actif</span>
             </div>
         </div>
-        <p class="keymsg">
-            Les contribuables alimentent le recouvrement.<br>
-            Les infrastructures enrichissent la connaissance du territoire.
-        </p>
+        <p class="keymsg">Même carte. Même référentiel. Données différentes.</p>
     </div>
 </section>
 
-<!-- ==================== RÉFÉRENCER ==================== -->
-<section id="referencier">
-    <div class="wrap grid-2">
-        <div>
-            <span class="kicker">Référencer</span>
-            <h2>Commencez par savoir ce qui existe sur votre territoire</h2>
-            <p class="lead">GeoTax permet de constituer progressivement un référentiel géographique structuré&nbsp;:</p>
-            <p style="margin:0.8rem 0;font-weight:600;color:var(--green)">Pays → Département → Commune → Quartier/Village → Marché</p>
-            <ul class="list-check">
-                <li>Identifiant unique et catégorie</li>
-                <li>Propriétaire, téléphone, adresse</li>
-                <li>Position GPS, géométrie et photo</li>
-                <li>Informations personnalisées par type d'activité</li>
-            </ul>
-        </div>
-        <div class="poi-card">
-            <span class="code">POI-001245</span> <span class="badge ok">À jour</span>
-            <dl>
-                <dt>Type</dt><dd>Commerce — Boutique X</dd>
-                <dt>Propriétaire</dt><dd>Jean Dupont</dd>
-                <dt>Téléphone</dt><dd>06 XX XX XX</dd>
-                <dt>Localisation</dt><dd>Quartier Tié-Tié</dd>
-                <dt>Taxe</dt><dd>Taxe communale</dd>
-            </dl>
-        </div>
-    </div>
-</section>
-
-<!-- ==================== COLLECTE TERRAIN ==================== -->
-<section id="collecte" class="alt">
+<!-- ==================== DU TERRAIN AU TABLEAU DE BORD ==================== -->
+<section id="terrain">
     <div class="wrap">
         <div class="center" style="max-width:720px;margin:0 auto">
-            <span class="kicker">Collecte terrain</span>
-            <h2>Vos agents recensent directement sur le terrain</h2>
+            <span class="kicker">La chaîne de valeur</span>
+            <h2>Collectez une fois. Exploitez plusieurs fois.</h2>
         </div>
         <div class="steps">
-            <div class="step"><div class="num">1</div><h3>Localiser</h3><p>Position GPS du POI</p></div>
-            <div class="step"><div class="num">2</div><h3>Identifier</h3><p>Informations du contribuable</p></div>
-            <div class="step"><div class="num">3</div><h3>Photographier</h3><p>Preuve visuelle</p></div>
-            <div class="step"><div class="num">4</div><h3>Géoréférencer</h3><p>Position réelle associée</p></div>
-            <div class="step"><div class="num">5</div><h3>Soumettre</h3><p>Fiche envoyée pour validation</p></div>
-            <div class="step"><div class="num">6</div><h3>Valider</h3><p>Acceptation ou rejet motivé</p></div>
+            <div class="step"><div class="num">1</div><h3>Collecte</h3><p>L'agent crée ou renseigne un élément</p></div>
+            <div class="step"><div class="num">2</div><h3>Géolocalisation</h3><p>Position GPS enregistrée</p></div>
+            <div class="step"><div class="num">3</div><h3>Validation</h3><p>Données contrôlées et validées</p></div>
+            <div class="step"><div class="num">4</div><h3>Enrichissement</h3><p>Photos, documents, attributs</p></div>
+            <div class="step"><div class="num">5</div><h3>Cartographie</h3><p>Visible immédiatement sur la carte</p></div>
+            <div class="step"><div class="num">6</div><h3>Analyse</h3><p>Alimente vos tableaux de bord</p></div>
         </div>
-        <div class="tracebox">Chaque collecte est tracée&nbsp;: qui a collecté, quoi, où et quand.</div>
+        <div class="tracebox">Vos agents travaillent depuis le terrain&nbsp;: géolocaliser, photographier, renseigner, joindre, soumettre, synchroniser.</div>
     </div>
 </section>
 
-<!-- ==================== FISCALISER + PAIEMENT ==================== -->
-<section id="paiement">
-    <div class="wrap grid-2">
-        <div>
-            <span class="kicker">Fiscaliser</span>
-            <h2>Transformez votre référentiel en potentiel fiscal</h2>
-            <p class="lead">Une fois les contribuables recensés, GeoTax permet d'affecter les taxes correspondant à leur activité.</p>
-            <ul class="list-check">
-                <li>Montant et périodicité paramétrables (mensuel, trimestriel, annuel, ponctuel)</li>
-                <li>Institution collectrice associée à chaque taxe</li>
-                <li>Montant personnalisé possible par contribuable</li>
-            </ul>
-            <p class="keymsg" style="text-align:left">Ne cherchez plus vos contribuables. Ils sont dans votre référentiel.</p>
-        </div>
-        <div>
-            <span class="kicker">Encaisser</span>
-            <h2>Facilitez le paiement des taxes</h2>
-            <ul class="list-check">
-                <li>📱 <strong>USSD</strong> — paiement depuis n'importe quel téléphone</li>
-                <li>💳 <strong>Mobile Money</strong> — opérateurs intégrés</li>
-                <li>🏢 <strong>Guichet</strong> — enregistrement des paiements physiques</li>
-                <li>🔐 <strong>Traçabilité</strong> — numéro de transaction, statut, reçu vérifiable</li>
-            </ul>
-            <div class="ussd">*123*IDBOUTIQUE*MONTANT#</div>
-        </div>
-    </div>
-</section>
-
-<!-- ==================== QR + CONTRÔLE ==================== -->
-<section class="dark">
-    <div class="wrap grid-2">
-        <div>
-            <span class="kicker">QR Code &amp; contrôle</span>
-            <h2>Contrôlez la situation fiscale en quelques secondes</h2>
-            <p class="lead">Chaque contribuable dispose d'un QR code unique. Le contrôleur le scanne devant le commerce et GeoTax affiche immédiatement la situation.</p>
-            <p style="margin-top:0.8rem;color:#a8c4b2">Identifier → Consulter → Contrôler → Payer</p>
-        </div>
-        <div class="poi-card" style="color:var(--text)">
-            <span class="code">POI-000245</span>
-            <dl>
-                <dt>Commerce</dt><dd>Boutique Chez Marie</dd>
-                <dt>Taxe</dt><dd>Taxe communale</dd>
-                <dt>Statut</dt>
-                <dd>
-                    <span class="badge ok">🟢 À jour</span>&nbsp;
-                    <span class="badge part">🟠 Partiel</span>&nbsp;
-                    <span class="badge late">🔴 Impayé</span>
-                </dd>
-                <dt>Dernier paiement</dt><dd>15/09/2026</dd>
-            </dl>
-        </div>
-    </div>
-    <div class="wrap"><p class="keymsg" style="color:var(--yellow)">Plus besoin de registres ni de justificatifs multiples.</p></div>
-</section>
-
-<!-- ==================== ESPACE CONTRIBUABLE ==================== -->
-<section id="commercant">
-    <div class="wrap grid-2">
-        <div>
-            <span class="kicker">Espace contribuable</span>
-            <h2>Donnez au contribuable accès à sa situation fiscale</h2>
-            <p class="lead">Depuis son espace personnel, le commerçant consulte et paie en toute autonomie.</p>
-            <p class="keymsg" style="text-align:left">Une relation fiscale plus simple, plus transparente et plus traçable.</p>
-        </div>
-        <div>
-            <ul class="list-check">
-                <li>Consulter ses taxes et les montants dus</li>
-                <li>Consulter l'historique de ses paiements</li>
-                <li>Effectuer un paiement en ligne</li>
-                <li>Récupérer ses justificatifs et reçus</li>
-            </ul>
-        </div>
-    </div>
-</section>
-
-<!-- ==================== PILOTAGE ==================== -->
-<section id="pilotage" class="alt">
+<!-- ==================== ANALYSE ==================== -->
+<section id="analyse" class="alt">
     <div class="wrap">
-        <div class="center" style="max-width:720px;margin:0 auto">
-            <span class="kicker">Pilotage</span>
-            <h2>De la collecte terrain à la décision</h2>
-            <p class="lead">Le responsable dispose d'une vision consolidée et en temps réel de l'activité fiscale.</p>
+        <div class="center" style="max-width:760px;margin:0 auto 2rem">
+            <span class="kicker">Analyse territoriale</span>
+            <h2>Votre territoire devient analysable</h2>
+            <p class="lead">La carte n'est que le début. La donnée collectée sur le terrain devient une donnée décisionnelle.</p>
         </div>
-        <div class="kpis">
-            <div class="kpi"><b>12 458</b><span>Contribuables recensés</span></div>
-            <div class="kpi"><b>8 920</b><span>Contribuables à jour</span></div>
-            <div class="kpi"><b>2 314</b><span>Impayés</span></div>
-            <div class="kpi"><b>125 M</b><span>FCFA collectés</span></div>
-            <div class="kpi"><b>3 842</b><span>Infrastructures référencées</span></div>
-        </div>
-        <div class="grid-3">
-            <div class="card"><span class="ico">🗺️</span><h3>Carte fiscale</h3><p>Contribuables à jour, partiels, impayés et infrastructures sur une même carte, filtrable par commune, quartier, activité ou statut.</p></div>
-            <div class="card"><span class="ico">📈</span><h3>Statistiques territoriales</h3><p>Recettes par période, par taxe, par institution ; zones à fort taux d'impayés ; performances des agents ; couverture du recensement.</p></div>
-            <div class="card"><span class="ico">📤</span><h3>Exports</h3><p>Balances par institut, répartition des recettes, listes d'impayés et exports Excel pour vos rapports.</p></div>
-        </div>
-        <p class="keymsg">Votre fiscalité devient visible sur la carte.</p>
-    </div>
-</section>
-
-<!-- ==================== WORKFLOW ==================== -->
-<section class="dark">
-    <div class="wrap">
-        <div class="center" style="max-width:720px;margin:0 auto">
-            <span class="kicker">Le cycle complet</span>
-            <h2>GeoTax accompagne tout le cycle fiscal</h2>
-        </div>
-        <div class="flow">
-            <span>Recenser</span><i>→</i><span>Géolocaliser</span><i>→</i><span>Valider</span><i>→</i>
-            <span>Fiscaliser</span><i>→</i><span>Notifier</span><i>→</i><span>Payer</span><i>→</i>
-            <span>Contrôler</span><i>→</i><span>Analyser</span>
-        </div>
-        <div class="branches">
-            <div class="branch contrib">
-                <h3>🏪 Contribuable</h3>
-                <p>Taxes → Paiements → Recouvrement</p>
+        <div class="grid-2">
+            <div class="card">
+                <h3>Exemple — activités d'une commune</h3>
+                <ul class="list-check">
+                    <li>Combien de commerces sont recensés&nbsp;?</li>
+                    <li>Quelle répartition par quartier&nbsp;?</li>
+                    <li>Quelle catégorie d'activité domine&nbsp;?</li>
+                    <li>Quelle zone concentre le plus d'activités&nbsp;?</li>
+                    <li>Combien sont à jour de leurs obligations&nbsp;?</li>
+                    <li>Quel montant attendu par zone&nbsp;?</li>
+                    <li>Quelle évolution sur une période&nbsp;?</li>
+                </ul>
             </div>
-            <div class="branch infra">
-                <h3>🏗️ Infrastructure</h3>
-                <p>Géoréférencement → Référentiel territorial</p>
+            <div class="card">
+                <h3>Exemple — intelligence commerciale</h3>
+                <ul class="list-check">
+                    <li>Où sont concentrés les commerces&nbsp;?</li>
+                    <li>Où sont les concurrents&nbsp;?</li>
+                    <li>Où manque-t-il un point de service&nbsp;?</li>
+                    <li>Quelle zone présente le plus fort potentiel&nbsp;?</li>
+                    <li>Où implanter, où développer&nbsp;?</li>
+                    <li>Comment évolue votre réseau&nbsp;?</li>
+                </ul>
             </div>
         </div>
-        <div class="branch-merge">↓ Pilotage territorial ↓</div>
     </div>
 </section>
 
-<!-- ==================== POUR QUI + SÉCURITÉ ==================== -->
-<section>
+<!-- ==================== TABLEAUX DE BORD + CARTE ==================== -->
+<section id="dashboards">
     <div class="wrap">
         <div class="center" style="max-width:720px;margin:0 auto 2rem">
-            <span class="kicker">Pour qui&nbsp;?</span>
-            <h2>Une plateforme conçue pour les collectivités</h2>
+            <span class="kicker">Pilotage</span>
+            <h2>Des données brutes aux indicateurs de décision</h2>
         </div>
-        <div class="grid-3">
-            <div class="card"><span class="ico">🏛️</span><h3>Mairies</h3><p>Gestion des taxes communales et suivi du recouvrement.</p></div>
-            <div class="card"><span class="ico">💼</span><h3>Services fiscaux</h3><p>Référencement et suivi des contribuables.</p></div>
-            <div class="card"><span class="ico">👮</span><h3>Services de contrôle</h3><p>Vérification rapide sur le terrain via QR code.</p></div>
-            <div class="card"><span class="ico">🗺️</span><h3>Services techniques</h3><p>Gestion des infrastructures et du patrimoine géoréférencé.</p></div>
-            <div class="card"><span class="ico">📊</span><h3>Décideurs</h3><p>Tableaux de bord et statistiques territoriales.</p></div>
-            <div class="card"><span class="ico">🔐</span><h3>Sécurité &amp; traçabilité</h3><p>Rôles et permissions, journal des collectes, workflow de validation, reçus vérifiables.</p></div>
+        <div class="grid-4">
+            <div class="card">
+                <h3>💼 Activité économique</h3>
+                <ul class="list-plain">
+                    <li>Nombre d'activités</li>
+                    <li>Répartition par catégorie</li>
+                    <li>Densité par zone</li>
+                    <li>Évolution temporelle</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>💰 Recettes</h3>
+                <ul class="list-plain">
+                    <li>Montant attendu / encaissé</li>
+                    <li>Impayés</li>
+                    <li>Recettes par taxe</li>
+                    <li>Recettes par zone</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>🏗️ Infrastructure</h3>
+                <ul class="list-plain">
+                    <li>Nombre d'équipements</li>
+                    <li>Répartition géographique</li>
+                    <li>État &amp; couverture</li>
+                    <li>Évolution du patrimoine</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>🗺️ Territoire</h3>
+                <ul class="list-plain">
+                    <li>Zones &amp; parcelles</li>
+                    <li>Infrastructures</li>
+                    <li>Activités</li>
+                    <li>Indicateurs territoriaux</li>
+                </ul>
+            </div>
+        </div>
+        <p class="keymsg">Votre base de données devient une carte vivante&nbsp;: rechercher, filtrer, mesurer, créer, analyser, exporter.</p>
+    </div>
+</section>
+
+<!-- ==================== COLLECTIVITÉS / ENTREPRISES ==================== -->
+<section id="collectivites" class="dark">
+    <div class="wrap">
+        <div class="grid-2">
+            <div>
+                <span class="kicker">Pour les collectivités</span>
+                <h2>De la connaissance du territoire à la maîtrise des recettes locales</h2>
+                <ul class="list-check" style="margin-top:1rem">
+                    <li><strong>Recenser</strong> — identifier les activités et contribuables</li>
+                    <li><strong>Affecter</strong> — associer chaque contribuable à ses obligations</li>
+                    <li><strong>Suivre</strong> — visualiser les situations : à jour, partiel, impayé</li>
+                    <li><strong>Faciliter le paiement</strong> — connecter les canaux disponibles</li>
+                    <li><strong>Contrôler</strong> — QR code et consultation de la situation</li>
+                    <li><strong>Piloter</strong> — analyser les recettes par taxe, zone, période, institution</li>
+                </ul>
+            </div>
+            <div>
+                <span class="kicker">Pour les entreprises</span>
+                <h2>Votre territoire devient une source d'intelligence commerciale</h2>
+                <ul class="list-check" style="margin-top:1rem">
+                    <li><strong>Où implanter&nbsp;?</strong> — zones d'activité, concurrence, infrastructures</li>
+                    <li><strong>Où développer&nbsp;?</strong> — zones à potentiel identifiées</li>
+                    <li><strong>Où sont vos actifs&nbsp;?</strong> — patrimoine centralisé et cartographié</li>
+                    <li><strong>Autour de vos sites&nbsp;?</strong> — objets et activités de l'environnement</li>
+                    <li><strong>Évolution du réseau&nbsp;?</strong> — comparaison dans le temps</li>
+                </ul>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- ==================== AVANT / APRÈS ==================== -->
+<!-- ==================== ADAPTABILITÉ ==================== -->
+<section id="adaptable">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto 2rem">
+            <span class="kicker">Adaptabilité</span>
+            <h2>Vos données. Vos catégories. Vos indicateurs.</h2>
+            <p class="lead">La plateforme permet de créer des fiches adaptées à chaque type d'objet.</p>
+        </div>
+        <div class="grid-5">
+            <div class="card fiche"><h3>École</h3><ul class="list-plain"><li>Nombre d'élèves</li><li>Niveaux</li><li>Capacité</li><li>Localisation</li></ul></div>
+            <div class="card fiche"><h3>Commerce</h3><ul class="list-plain"><li>Activité</li><li>Propriétaire</li><li>Téléphone</li><li>Obligations</li></ul></div>
+            <div class="card fiche"><h3>Pylône</h3><ul class="list-plain"><li>Opérateur</li><li>Hauteur</li><li>Technologie</li><li>Coordonnées</li></ul></div>
+            <div class="card fiche"><h3>Parcelle</h3><ul class="list-plain"><li>Superficie</li><li>Propriétaire</li><li>Occupation</li><li>Documents</li></ul></div>
+            <div class="card fiche"><h3>Pipeline</h3><ul class="list-plain"><li>Longueur</li><li>Tracé</li><li>Zones traversées</li></ul></div>
+        </div>
+        <p class="keymsg">Vous définissez le référentiel. La plateforme s'adapte.</p>
+    </div>
+</section>
+
+<!-- ==================== POURQUOI ==================== -->
 <section class="alt">
     <div class="wrap">
         <div class="center" style="max-width:720px;margin:0 auto">
-            <span class="kicker">La différence</span>
-            <h2>Avant / Après GeoTax</h2>
+            <span class="kicker">Pourquoi la plateforme&nbsp;?</span>
+            <h2>Six raisons de choisir GeoTax</h2>
         </div>
-        <div class="ba">
-            <div class="card before">
-                <h3 style="color:var(--red);margin-bottom:0.6rem">Avant</h3>
-                <ul class="list-check list-cross">
-                    <li>Données dispersées, registres inexploitables</li>
-                    <li>Contribuables mal localisés</li>
-                    <li>Contrôle manuel sur le terrain</li>
-                    <li>Paiements difficiles à consolider</li>
-                    <li>Peu de visibilité sur les impayés</li>
-                    <li>Données géographiques sous-exploitées</li>
-                </ul>
-            </div>
-            <div class="card after">
-                <h3 style="color:var(--green);margin-bottom:0.6rem">Avec GeoTax</h3>
-                <ul class="list-check">
-                    <li>Référentiel géographique unique</li>
-                    <li>Contribuables identifiés et localisés</li>
-                    <li>Taxes affectées, paiements digitalisés</li>
-                    <li>Contrôle QR en quelques secondes</li>
-                    <li>Tableau de bord et carte fiscale</li>
-                    <li>Données territoriales exploitables</li>
-                </ul>
-            </div>
+        <div class="steps">
+            <div class="step"><div class="num">1</div><h3>Terrain + carte</h3><p>La donnée est créée là où elle existe</p></div>
+            <div class="step"><div class="num">2</div><h3>Référentiel unique</h3><p>Toutes vos informations structurées au même endroit</p></div>
+            <div class="step"><div class="num">3</div><h3>Multi-métiers</h3><p>Fiscalité, foncier, commerce, patrimoine, infrastructures</p></div>
+            <div class="step"><div class="num">4</div><h3>Données exploitables</h3><p>Bien plus que des points sur une carte</p></div>
+            <div class="step"><div class="num">5</div><h3>Analyse décisionnelle</h3><p>Indicateurs et tableaux de bord</p></div>
+            <div class="step"><div class="num">6</div><h3>Évolutive</h3><p>Commencez par un besoin, ajoutez des modules</p></div>
         </div>
     </div>
 </section>
 
-<!-- ==================== POSITIONNEMENT + CTA ==================== -->
+<!-- ==================== CTA FINAL ==================== -->
 <section class="cta-final">
     <div class="wrap">
-        <span class="kicker">GeoTax</span>
-        <h2>Votre territoire, numérisé.</h2>
+        <span class="kicker">GeoTax — Plateforme de connaissance territoriale</span>
+        <h2>Et si vous commenciez par connaître<br>précisément votre territoire&nbsp;?</h2>
+        <p class="cta-verbs">Recenser. Géolocaliser. Analyser. Décider.</p>
         <p class="lead">
-            GeoTax n'est pas seulement un outil de recouvrement — c'est le référentiel
-            numérique de votre territoire. Il connecte territoire, contribuables,
-            fiscalité, paiements, contrôle et données.
-        </p>
-        <p class="lead" style="margin-bottom:2rem">
-            Passez d'une fiscalité déclarative à une fiscalité géoréférencée.
+            Déployez une plateforme adaptée à votre organisation, à vos données
+            et à vos objectifs.
         </p>
         <a href="/login" class="btn btn-primary" style="font-size:1.05rem;padding:0.9rem 2.2rem">Demander une démonstration</a>
         &nbsp;
-        <a href="/login" class="btn btn-yellow" style="font-size:1.05rem;padding:0.9rem 2.2rem">Accéder à la démonstration →</a>
+        <a href="/login" class="btn btn-yellow" style="font-size:1.05rem;padding:0.9rem 2.2rem">Explorer la plateforme →</a>
     </div>
 </section>
 
 <!-- ==================== FOOTER ==================== -->
 <footer>
     <div class="wrap">
-        <a class="brand" href="/" style="color:#fff"><span class="brand-mark">GT</span> GeoTax</a>
-        <span>Référencer → Fiscaliser → Recouvrer</span>
+        <a class="brand" href="/"><span class="brand-mark">GT</span> GeoTax</a>
+        <span>Recenser · Géolocaliser · Analyser · Décider</span>
         <div class="right">
             <a href="/login">Connexion équipe</a>
             <a href="/commercant">Espace contribuable</a>
