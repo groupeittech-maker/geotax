@@ -1,0 +1,13 @@
+# Override HTTPS — activer après obtention du certificat Let's Encrypt
+# Usage : docker compose -f docker-compose.yml -f docker-compose.ssl.yml up -d
+
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/var/www/static:ro
+      - uploads_data:/var/www/uploads/poi:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro

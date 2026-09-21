@@ -1,0 +1,6 @@
+# Override d'urgence : démarrer Gunicorn sans migrations entrypoint (502).
+# Usage : docker compose -f docker-compose.yml -f docker-compose.emergency.yml up -d --force-recreate app
+services:
+  app:
+    entrypoint: ["gunicorn"]
+    command: ["-c", "deploy/gunicorn.conf.py", "app:app"]

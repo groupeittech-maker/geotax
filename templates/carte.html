@@ -3,68 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte des Commerces</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>Carte GeoTax — POI</title>
+    {% include '_head.html' %}
+    <!-- Leaflet CSS (local) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet.markercluster/MarkerCluster.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet.markercluster/MarkerCluster.Default.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet-draw/leaflet.draw.css') }}" />
     <style>
         #map {
-            height: calc(100vh - 200px);
+            height: calc(100vh - 220px);
             width: 100%;
-            border-radius: 10px;
+            border-radius: 12px;
             z-index: 1;
+            border: 1px solid #e5e9ef;
         }
         .map-controls {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #fff;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #e5e9ef;
             display: flex;
-            gap: 15px;
+            gap: 8px;
             align-items: center;
             flex-wrap: wrap;
         }
         .map-controls button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
+            padding: 8px 14px;
+            border: 1px solid #e5e9ef;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: 0.15s ease;
+            background: #f8fafb;
+            color: #5b6570;
         }
         .map-controls button.active {
-            background: #667eea;
-            color: white;
-        }
-        .map-controls button:not(.active) {
-            background: #f0f0f0;
-            color: #333;
+            background: rgba(13, 150, 104, 0.1);
+            color: #087a54;
+            border-color: rgba(13, 150, 104, 0.2);
         }
         .map-controls button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            background: #eef2f6;
         }
         .map-info {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #fff;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #e5e9ef;
         }
         .map-info p {
-            margin: 5px 0;
-            color: #666;
+            margin: 4px 0;
+            color: #5b6570;
+            font-size: 0.9rem;
         }
         .map-info strong {
-            color: #333;
-        }
-        .google-map-container {
-            height: calc(100vh - 200px);
-            width: 100%;
-            border-radius: 10px;
-            overflow: hidden;
+            color: #111827;
         }
         .leaflet-popup-content {
             min-width: 200px;
@@ -73,10 +70,10 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .popup-title {
-            font-weight: bold;
-            font-size: 16px;
+            font-weight: 600;
+            font-size: 15px;
             margin-bottom: 8px;
-            color: #667eea;
+            color: #087a54;
         }
         .popup-info {
             margin: 5px 0;
@@ -108,401 +105,1179 @@
             background: #f44336;
             color: white;
         }
+        .popup-actions {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .popup-actions a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .map-popup-delete-btn {
+            padding: 4px 10px;
+            border: 1px solid #ffcdd2;
+            border-radius: 6px;
+            background: #ffebee;
+            color: #c62828;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .map-popup-delete-btn:hover {
+            background: #ffcdd2;
+        }
+        .map-popup-edit-btn {
+            padding: 4px 10px;
+            border: 1px solid #bbdefb;
+            border-radius: 6px;
+            background: #e3f2fd;
+            color: #1565c0;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .map-popup-edit-btn:hover {
+            background: #bbdefb;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🗺️ Carte des Commerces</h1>
-            {% include '_nav.html' %}
+        <header class="app-header">
+            {% include '_header_top.html' %}
         </header>
 
         <main>
-            <div class="map-controls">
-                <button id="btnOpenStreetMap" class="active" onclick="switchMap('osm')">🗺️ OpenStreetMap</button>
-                <button id="btnGoogleMap" onclick="switchMap('google')">🌍 Google Maps</button>
-                <button onclick="centerMap()">📍 Recentrer</button>
-                <button onclick="refreshMap()">🔄 Actualiser</button>
+            <div class="page-header">
+                <p class="page-eyebrow">Cartographie</p>
+                <h1 class="page-title">Carte des POI</h1>
+                <p class="page-subtitle">Visualisez et créez tous les POI — points, pylônes, pipelines, parcelles et périmètres</p>
             </div>
+            <div class="map-search-bar">
+                <div class="map-search-input-wrap">
+                    <input type="search" id="mapGeocodeInput" placeholder="Rechercher une adresse (ex. Avenue de la Paix, Brazzaville)" autocomplete="off">
+                    <div id="mapGeocodeResults" class="map-geocode-results" style="display:none;"></div>
+                </div>
+                <button type="button" onclick="searchMapAddress()">🔍 Rechercher</button>
+            </div>
+
+            <div class="map-controls">
+                <button id="btnPlan" class="active" onclick="switchMap('plan')">Plan</button>
+                <button id="btnSatellite" onclick="switchMap('satellite')">Satellite</button>
+                <button id="btnHybrid" onclick="switchMap('hybrid')">Hybride</button>
+                <button id="btnOsm" onclick="switchMap('osm')">OpenStreetMap</button>
+                <button id="btnCluster" class="map-cluster-toggle active" onclick="toggleClustering()">Regroupement</button>
+                <button onclick="centerMap()">Recentrer</button>
+                <button onclick="refreshMap()">🔄 Actualiser</button>
+                <button type="button" class="btn btn-primary map-btn-new-poi" onclick="PoiWizard.openShapePicker()">➕ Nouveau POI</button>
+            </div>
+
+            <div id="poiWizardStartPanel" class="poi-wizard-start-panel" hidden>
+                <div class="poi-wizard-start-header">
+                    <strong id="poiWizardStartTitle">Position de départ</strong>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="cancelPoiWizardDraw()">Annuler</button>
+                </div>
+                <p id="poiWizardStartIntro" class="poi-wizard-start-intro"></p>
+
+                <div id="poiWizardStartStep" class="poi-wizard-start-step">
+                    <label class="poi-wizard-start-label" for="poiStartLat">Coordonnées GPS de départ</label>
+                    <div class="poi-wizard-start-coords">
+                        <input type="number" id="poiStartLat" step="0.000001" placeholder="Latitude">
+                        <input type="number" id="poiStartLng" step="0.000001" placeholder="Longitude">
+                    </div>
+                    <div class="poi-wizard-start-actions">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="poiWizardTakeMyPosition()">📍 Prendre ma position</button>
+                        <button type="button" class="btn btn-primary btn-small" onclick="poiWizardMarkStartPoint()">✓ Marquer le départ</button>
+                    </div>
+                </div>
+
+                <div id="poiWizardTraceStep" class="poi-wizard-start-step" hidden>
+                    <p id="poiWizardTraceHint" class="poi-wizard-trace-hint"></p>
+
+                    <div class="poi-trace-summary">
+                        <span class="poi-trace-summary-item poi-trace-start">
+                            <strong>Départ</strong>
+                            <span id="poiTraceStartCoords">—</span>
+                        </span>
+                        <span class="poi-trace-summary-item poi-trace-end" id="poiTraceEndSummary" hidden>
+                            <strong>Arrivée</strong>
+                            <span id="poiTraceEndCoords">—</span>
+                        </span>
+                    </div>
+
+                    <label class="poi-wizard-start-label" for="poiTraceLat">Ajouter un point GPS</label>
+                    <div class="poi-wizard-start-coords">
+                        <input type="number" id="poiTraceLat" step="0.000001" placeholder="Latitude">
+                        <input type="number" id="poiTraceLng" step="0.000001" placeholder="Longitude">
+                    </div>
+                    <div class="poi-wizard-start-actions poi-trace-gps-actions">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="poiWizardTakeGpsForTrace()">📍 Ma position</button>
+                        <button type="button" class="btn btn-secondary btn-small" onclick="poiWizardAddGpsPoint('waypoint')">+ Sommet intermédiaire</button>
+                        <button type="button" class="btn btn-primary btn-small" id="poiTraceAddEndBtn" onclick="poiWizardAddGpsPoint('end')">+ Point d'arrivée</button>
+                    </div>
+
+                    <div id="poiTracePointsList" class="poi-trace-points-list"></div>
+
+                    <p id="poiWizardTraceCount" class="poi-wizard-trace-count"></p>
+                    <div class="poi-wizard-start-actions">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="poiWizardUndoTracePoint()">↩ Annuler le dernier point</button>
+                        <button type="button" class="btn btn-primary btn-small" id="poiTraceFinishBtn" onclick="poiWizardFinishTrace()">✓ Terminer le tracé</button>
+                    </div>
+                </div>
+
+                <div id="poiWizardConfirmStep" class="poi-wizard-start-step" hidden>
+                    <p class="poi-wizard-confirm-text">Point de départ enregistré. Poursuivre vers les caractéristiques du POI ?</p>
+                    <div class="poi-wizard-start-actions">
+                        <button type="button" class="btn btn-primary btn-small" onclick="poiWizardConfirmSinglePoint()">Continuer →</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-filters">
+                <select id="mapFilterSecteur" onchange="applyMapFilters()">
+                    <option value="">Tous secteurs</option>
+                </select>
+                <select id="mapFilterType" onchange="applyMapFilters()">
+                    <option value="">Tous types</option>
+                </select>
+                <select id="mapFilterValidation" onchange="applyMapFilters()">
+                    <option value="">Toutes validations</option>
+                    <option value="valide">Validés</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="brouillon">Brouillons</option>
+                    <option value="rejete">Rejetés</option>
+                </select>
+                <select id="mapFilterFiscal" onchange="applyMapFilters()">
+                    <option value="">Statut fiscal</option>
+                    <option value="a_jour">À jour</option>
+                    <option value="non_a_jour">Non à jour</option>
+                </select>
+                <span class="map-filter-geom-group">
+                    <label class="map-geom-filter-label"><input type="checkbox" class="map-geom-filter" value="pylon" checked> Pylônes</label>
+                    <label class="map-geom-filter-label"><input type="checkbox" class="map-geom-filter" value="pipeline" checked> Pipelines</label>
+                    <label class="map-geom-filter-label"><input type="checkbox" class="map-geom-filter" value="parcel" checked> Parcelles</label>
+                    <label class="map-geom-filter-label"><input type="checkbox" class="map-geom-filter" value="perimeter" checked> Périmètres</label>
+                </span>
+            </div>
+            <div id="mapLegend" class="map-legend"></div>
 
             <div class="map-info">
-                <p><strong>Total de commerces géolocalisés:</strong> <span id="totalCommerces">0</span></p>
-                <p><strong>Commerces à jour:</strong> <span id="commercesAJour" style="color: #4caf50;">0</span></p>
-                <p><strong>Commerces non à jour:</strong> <span id="commercesNonAJour" style="color: #f44336;">0</span></p>
+                <p><strong>POI points :</strong> <span id="totalCommerces">0</span>
+                    — à jour <span id="commercesAJour" style="color: #4caf50;">0</span>
+                    / hors délai <span id="commercesNonAJour" style="color: #f44336;">0</span></p>
+                <p><strong>Formes géométriques :</strong> <span id="totalMapFeatures">0</span>
+                    (<span id="countPylon">0</span> pylônes,
+                    <span id="countPipeline">0</span> pipelines,
+                    <span id="countParcel">0</span> parcelles,
+                    <span id="countPerimeter">0</span> périmètres)</p>
             </div>
 
-            <!-- OpenStreetMap Container -->
             <div id="mapContainer">
                 <div id="map"></div>
             </div>
-
-            <!-- Google Maps Container (hidden by default) -->
-            <div id="googleMapContainer" class="google-map-container" style="display: none;"></div>
         </main>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Google Maps API - Note: Remplacez YOUR_API_KEY par votre clé API Google Maps -->
-    <!-- Pour utiliser Google Maps, vous devez obtenir une clé API gratuite sur https://console.cloud.google.com/ -->
-    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initGoogleMap" async defer></script> -->
+    <div id="mapFeatureModal" class="map-feature-modal" style="display:none;">
+        <div class="map-feature-modal-content">
+            <h3 id="mapFeatureModalTitle">Enregistrer <span id="mapFeatureTypeLabel">—</span></h3>
+            <input type="hidden" id="mapFeatureEditId" value="">
+            <input type="hidden" id="mapFeatureType">
+            <div class="form-group">
+                <label for="mapFeatureName">Nom *</label>
+                <input type="text" id="mapFeatureName" placeholder="Ex. Pylône MT ligne Nord">
+            </div>
+            <div class="form-group">
+                <label for="mapFeatureDescription">Description</label>
+                <textarea id="mapFeatureDescription" rows="2" placeholder="Observations, référence…"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="mapFeatureTypeCommerce">Type d'activité</label>
+                <select id="mapFeatureTypeCommerce">
+                    <option value="">— Aucun —</option>
+                </select>
+            </div>
+            <div id="mapFeatureTechFields" class="map-feature-tech-fields"></div>
+            <div id="mapFeaturePylonFields" class="form-group" style="display:none;">
+                <label for="mapFeatureRadius">Rayon d'influence (m)</label>
+                <input type="number" id="mapFeatureRadius" min="1" step="1" value="500">
+            </div>
+            <div id="mapFeaturePipelineFields" class="form-group" style="display:none;">
+                <label for="mapFeatureDiameter">Diamètre (mm)</label>
+                <input type="number" id="mapFeatureDiameter" min="1" step="1" value="400">
+            </div>
+            <div class="map-feature-modal-actions">
+                <button type="button" class="btn btn-secondary" id="mapFeatureCancelBtn">Annuler</button>
+                <button type="button" class="btn btn-primary" id="mapFeatureSaveBtn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS (local) -->
+    <script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/leaflet.markercluster/leaflet.markercluster.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/leaflet-draw/leaflet.draw.js') }}"></script>
+    <script src="{{ url_for('static', filename='map-styles.js') }}"></script>
+    <script src="{{ url_for('static', filename='poi-wizard.js') }}"></script>
+    <script src="{{ url_for('static', filename='map-features.js') }}"></script>
 
     <script>
         let map;
-        let googleMap;
+        let googlePlanLayer;
+        let googleSatelliteLayer;
+        let googleHybridBaseLayer;
+        let googleHybridLabelsLayer;
+        let osmLayer;
+        let currentBaseLayer = null;
         let markers = [];
-        let currentMapType = 'osm';
+        let markerClusterGroup = null;
+        let clusteringEnabled = true;
+        let currentMapType = 'plan';
         let commercesData = [];
+        let markersById = new Map();
+        let initialMapFitDone = false;
+        let pointsViewportMode = false;
+        let loadedPointsBBox = null;
+        let typesById = {};
+        let addPoiMode = false;
+        let poiWizardDrawShape = null;
+        let poiWizardPreviewLayer = null;
+        let poiWizardStartMarker = null;
+        let poiWizardStartLatLng = null;
+        window.addPoiMode = addPoiMode;
+        let tempClickMarker = null;
+        let geocodeMarker = null;
+        let geocodeDebounceTimer = null;
         let targetCommerceId = {% if commerce_id %}{{ commerce_id }}{% else %}null{% endif %};
         let targetCommerceCode = '{% if commerce_code %}{{ commerce_code }}{% else %}{% endif %}';
 
-        // Initialiser la carte OpenStreetMap
-        function initMap() {
+        // Tuiles Google via Leaflet (sans clé API) — google.com/vt/...
+        function createGoogleTileLayer(lyrs, options = {}) {
+            return L.tileLayer('https://mt{s}.google.com/vt/lyrs=' + lyrs + '&x={x}&y={y}&z={z}', Object.assign({
+                subdomains: ['0', '1', '2', '3'],
+                attribution: '© Google',
+                maxZoom: 21
+            }, options));
+        }
+
+        function createOsmLayer() {
+            return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                subdomains: ['a', 'b', 'c'],
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+            });
+        }
+
+        function getMapBBoxParam(paddingRatio = 0) {
+            if (!map) return '';
+            const b = map.getBounds();
+            const sw = b.getSouthWest();
+            const ne = b.getNorthEast();
+            if (!paddingRatio) {
+                return `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`;
+            }
+            const latPad = (ne.lat - sw.lat) * paddingRatio;
+            const lngPad = (ne.lng - sw.lng) * paddingRatio;
+            return `${sw.lng - lngPad},${sw.lat - latPad},${ne.lng + lngPad},${ne.lat + latPad}`;
+        }
+
+        function parseBBoxParam(bboxStr) {
+            const p = bboxStr.split(',').map(Number);
+            if (p.length !== 4 || p.some(n => Number.isNaN(n))) return null;
+            return { minLng: p[0], minLat: p[1], maxLng: p[2], maxLat: p[3] };
+        }
+
+        function viewNeedsPointsReload() {
+            if (!pointsViewportMode || !loadedPointsBBox) return true;
+            const b = map.getBounds();
+            const sw = b.getSouthWest();
+            const ne = b.getNorthEast();
+            const marginLat = (loadedPointsBBox.maxLat - loadedPointsBBox.minLat) * 0.15;
+            const marginLng = (loadedPointsBBox.maxLng - loadedPointsBBox.minLng) * 0.15;
+            return sw.lat < loadedPointsBBox.minLat + marginLat
+                || ne.lat > loadedPointsBBox.maxLat - marginLat
+                || sw.lng < loadedPointsBBox.minLng + marginLng
+                || ne.lng > loadedPointsBBox.maxLng - marginLng;
+        }
+
+        let viewportPointsTimer = null;
+        let pointsLoadInFlight = false;
+
+        function scheduleViewportPointsReload() {
+            if (!map || !pointsViewportMode) return;
+            if (map._popup && map._popup.isOpen()) return;
+            clearTimeout(viewportPointsTimer);
+            viewportPointsTimer = setTimeout(() => {
+                if (viewNeedsPointsReload()) loadCommerces({ viewport: true });
+            }, 600);
+        }
+
+        function initMarkerCluster() {
+            if (markerClusterGroup) {
+                map.removeLayer(markerClusterGroup);
+                markerClusterGroup = null;
+            }
+            if (typeof L.markerClusterGroup !== 'function') {
+                console.warn('Plugin Leaflet.markercluster indisponible — affichage sans regroupement.');
+                clusteringEnabled = false;
+                document.getElementById('btnCluster')?.classList.remove('active');
+                return;
+            }
+            markerClusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 55,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                disableClusteringAtZoom: 17,
+                animateAddingMarkers: false,
+            });
+            if (clusteringEnabled) {
+                map.addLayer(markerClusterGroup);
+            }
+        }
+
+        function addMarkerToMap(marker) {
+            if (clusteringEnabled && markerClusterGroup) {
+                markerClusterGroup.addLayer(marker);
+            } else {
+                marker.addTo(map);
+            }
+        }
+
+        function removeMarkerById(id) {
+            const marker = markersById.get(id);
+            if (!marker || !map) return;
             try {
-                console.log('Initialisation de la carte OpenStreetMap...');
-                
-                // Vérifier que l'élément map existe
+                if (clusteringEnabled && markerClusterGroup) {
+                    markerClusterGroup.removeLayer(marker);
+                } else {
+                    map.removeLayer(marker);
+                }
+            } catch (e) {
+                console.warn('Suppression marqueur:', e);
+            }
+            markersById.delete(id);
+            markers = markers.filter(m => m !== marker);
+        }
+
+        function clearMapMarkers() {
+            [...markersById.keys()].forEach(id => removeMarkerById(id));
+        }
+
+        function toggleClustering() {
+            clusteringEnabled = !clusteringEnabled;
+            document.getElementById('btnCluster')?.classList.toggle('active', clusteringEnabled);
+            initMarkerCluster();
+            markers = [];
+            markersById.clear();
+            applyMapFilters();
+        }
+
+        function initMap(baseLayerType = 'plan') {
+            try {
                 const mapElement = document.getElementById('map');
                 if (!mapElement) {
                     console.error('Élément #map non trouvé');
                     return;
                 }
-                
-                map = L.map('map').setView([4.0511, 9.7679], 13); // Coordonnées par défaut (Douala, Cameroun)
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 19
-                }).addTo(map);
+                map = L.map('map');
+                const initialView = window.GeoTaxCountry?.getMapView?.() || { lat: 0.5, lng: 18.0, zoom: 4 };
+                if (initialView.bounds) {
+                    map.fitBounds(initialView.bounds, { maxZoom: initialView.zoom || 14, padding: [40, 40] });
+                } else {
+                    map.setView([initialView.lat, initialView.lng], initialView.zoom || 13);
+                }
 
-                console.log('Carte OpenStreetMap initialisée');
-                
-                // Attendre que la carte soit prête avant de charger les commerces
-                map.whenReady(() => {
-                    console.log('Carte prête, chargement des commerces...');
-                    loadCommerces();
+                googlePlanLayer = createGoogleTileLayer('m');
+                googleSatelliteLayer = createGoogleTileLayer('s');
+                googleHybridBaseLayer = createGoogleTileLayer('s');
+                googleHybridLabelsLayer = createGoogleTileLayer('h', { pane: 'overlayPane' });
+                osmLayer = createOsmLayer();
+
+                setBaseLayer(baseLayerType);
+                initMarkerCluster();
+
+                map.on('click', onMapClick);
+                map.on('moveend', scheduleViewportPointsReload);
+
+                map.whenReady(async () => {
+                    await loadMapFilters();
+                    await GeoTaxMapFeatures.init(map, {
+                        onCountsUpdate: updateMapFeatureCounts,
+                        reloadOnViewportChange: false,
+                    });
+                    GeoTaxMapFeatures.setDrawCompleteHandler(null);
+                    await loadCommerces();
+
+                    const params = new URLSearchParams(window.location.search);
+                    const createShape = params.get('create');
+                    if (createShape && PoiWizard.getShape(createShape)) {
+                        const pending = PoiWizard.getPending();
+                        if (pending?.categorie) {
+                            window.PoiWizardOnCarte(createShape);
+                        } else {
+                            PoiWizard.savePending({ shape: createShape, step: 'shape' });
+                            PoiWizard.openCategoryPicker();
+                        }
+                    }
+
+                    const focusPoiId = targetCommerceId || parseInt(params.get('poi_id'), 10) || null;
+                    const editFeatureId = parseInt(params.get('edit_feature'), 10) || null;
+                    const focusId = focusPoiId || editFeatureId;
+
+                    if (focusId) {
+                        const focusedOnMarker = commercesData.some(c => c.id === focusId);
+                        if (!focusedOnMarker) {
+                            await GeoTaxMapFeatures.focusFeature(focusId);
+                        }
+                        if (editFeatureId && params.get('edit') === '1') {
+                            window.location.href = `/pois?edit_boutique=${editFeatureId}`;
+                            return;
+                        }
+                        history.replaceState({}, '', '/carte');
+                    }
                 });
             } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error);
                 console.error('Erreur lors de l\'initialisation de la carte:', error);
-                alert('Erreur lors de l\'initialisation de la carte: ' + error.message);
-            }
-        }
-
-        // Initialiser Google Maps
-        function initGoogleMap() {
-            if (typeof google === 'undefined' || !google.maps) {
-                console.warn('Google Maps API non chargée. Utilisez OpenStreetMap ou ajoutez votre clé API Google Maps.');
-                return;
-            }
-            
-            const defaultLocation = { lat: 4.0511, lng: 9.7679 };
-            
-            googleMap = new google.maps.Map(document.getElementById('googleMapContainer'), {
-                zoom: 13,
-                center: defaultLocation,
-                mapTypeId: 'roadmap'
-            });
-
-            // Charger les commerces si on est déjà sur Google Maps
-            if (currentMapType === 'google') {
-                loadCommercesGoogle();
+                alert('Erreur lors de l\'initialisation de la carte: ' + (msg || 'erreur inconnue'));
             }
         }
 
         // Charger les commerces depuis l'API
-        async function loadCommerces() {
+        async function loadCommerces(options = {}) {
+            if (pointsLoadInFlight) return;
+            pointsLoadInFlight = true;
             try {
-                console.log('Chargement des commerces...');
-                const response = await fetch('/api/boutiques?with_coords=true');
-                
+                let url = '/api/boutiques?with_coords=true&all_categories=1&map_view=1';
+                if (options.viewport || pointsViewportMode) {
+                    url += `&bbox=${encodeURIComponent(getMapBBoxParam(0.35))}`;
+                }
+                if (window.GeoTaxCountry) {
+                    url = GeoTaxCountry.appendQuery(url);
+                }
+
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
-                const commerces = await response.json();
-                console.log('Commerces reçus:', commerces.length);
-                commercesData = commerces;
-                
-                // Filtrer les commerces avec coordonnées
-                const commercesAvecCoords = commerces.filter(c => {
-                    const hasCoords = c.latitude && c.longitude;
-                    if (hasCoords) {
-                        console.log(`Commerce ${c.nom}: lat=${c.latitude}, lng=${c.longitude}`);
-                    }
-                    return hasCoords;
-                });
-                
-                console.log('Commerces avec coordonnées:', commercesAvecCoords.length);
-                
-                updateStats(commercesAvecCoords);
-                
-                if (commercesAvecCoords.length === 0) {
-                    alert('Aucun commerce géolocalisé trouvé. Veuillez ajouter des coordonnées GPS aux commerces.');
-                    return;
+
+                const data = await response.json();
+                const commerces = (Array.isArray(data) ? data : (data.boutiques || []))
+                    .filter(c => c.active !== false)
+                    .filter(c => !c.feature_type || c.feature_type === 'point');
+
+                const total = data.meta?.count ?? commerces.length;
+                if (!pointsViewportMode && total > 400) {
+                    pointsViewportMode = true;
+                    loadedPointsBBox = null;
+                } else if (!options.viewport && total <= 400) {
+                    pointsViewportMode = false;
                 }
-                
-                if (currentMapType === 'osm') {
-                    if (!map) {
-                        console.error('La carte OpenStreetMap n\'est pas initialisée');
-                        return;
-                    }
-                    displayCommercesOSM(commercesAvecCoords);
-                } else if (currentMapType === 'google') {
-                    if (!googleMap) {
-                        console.error('La carte Google Maps n\'est pas initialisée');
-                        return;
-                    }
-                    displayCommercesGoogle(commercesAvecCoords);
+
+                if (pointsViewportMode) {
+                    const merged = new Map(commercesData.map(c => [c.id, c]));
+                    commerces.forEach(c => merged.set(c.id, c));
+                    commercesData = [...merged.values()];
+                    loadedPointsBBox = parseBBoxParam(getMapBBoxParam(0.35));
+                } else {
+                    commercesData = commerces;
                 }
+
+                applyMapFilters();
+                await refreshMapLegend();
             } catch (error) {
                 console.error('Erreur lors du chargement des commerces:', error);
                 alert('Erreur lors du chargement des commerces: ' + error.message);
+            } finally {
+                pointsLoadInFlight = false;
             }
         }
 
-        // Afficher les commerces sur OpenStreetMap
-        function displayCommercesOSM(commerces) {
+        async function loadMapFilters() {
             try {
-                console.log('Affichage de', commerces.length, 'commerces sur OpenStreetMap');
-                
+                const [secteursRes, typesRes] = await Promise.all([
+                    fetch('/api/secteurs-activite'),
+                    fetch('/api/types-commerce?include_champs=false'),
+                ]);
+                const secteurs = await secteursRes.json();
+                const types = await typesRes.json();
+                typesById = {};
+                types.forEach(t => { typesById[t.id] = t; });
+
+                const secteurSel = document.getElementById('mapFilterSecteur');
+                secteurSel.innerHTML = '<option value="">Tous secteurs</option>';
+                secteurs.forEach(s => {
+                    secteurSel.innerHTML += `<option value="${s.id}">${s.icon || ''} ${s.nom}</option>`;
+                });
+
+                const typeSel = document.getElementById('mapFilterType');
+                typeSel.innerHTML = '<option value="">Tous types</option>';
+                types.forEach(t => {
+                    typeSel.innerHTML += `<option value="${t.id}">${t.nom}</option>`;
+                });
+            } catch (e) {
+                console.warn('Filtres carte:', e);
+            }
+        }
+
+        function applyMapFilters() {
+            const secteurId = document.getElementById('mapFilterSecteur')?.value;
+            const typeId = document.getElementById('mapFilterType')?.value;
+            const validation = document.getElementById('mapFilterValidation')?.value;
+            const fiscal = document.getElementById('mapFilterFiscal')?.value;
+
+            let filtered = commercesData.filter(c => c.latitude && c.longitude);
+            if (secteurId) {
+                filtered = filtered.filter(c => c.type_commerce?.secteur_id === parseInt(secteurId, 10));
+            }
+            if (typeId) {
+                filtered = filtered.filter(c => c.type_commerce_id === parseInt(typeId, 10));
+            }
+            if (validation) {
+                filtered = filtered.filter(c => (c.statut_validation || 'valide') === validation);
+            }
+            if (fiscal === 'a_jour') filtered = filtered.filter(c => c.a_jour);
+            if (fiscal === 'non_a_jour') filtered = filtered.filter(c => !c.a_jour);
+
+            updateStats(filtered);
+            renderMapLegend(filtered);
+            displayCommerces(filtered);
+        }
+
+        function getTypeColor(commerce) {
+            if (commerce.display_color) return commerce.display_color;
+            const tc = commerce.type_commerce;
+            if (tc?.color) return tc.color;
+            if (tc?.secteur?.color) return tc.secteur.color;
+            return '#607d8b';
+        }
+
+        function renderMapLegend(commerces) {
+            const legend = document.getElementById('mapLegend');
+            if (!legend) return;
+            const typesSeen = {};
+            commerces.forEach(c => {
+                if (c.type_commerce) typesSeen[c.type_commerce.id] = c.type_commerce;
+            });
+            (GeoTaxMapFeatures.getLoadedActivityTypes?.() || []).forEach(tc => {
+                if (tc && tc.id) typesSeen[tc.id] = tc;
+            });
+            const items = Object.values(typesSeen).sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+            if (!items.length) {
+                legend.innerHTML = '<span class="map-legend-empty">Légende par type d\'activité — assignez un type aux POI</span>';
+                return;
+            }
+            legend.innerHTML = '<span class="map-legend-title">Types d\'activité :</span>' + items.map(t => {
+                const style = window.GeoTaxMapStyles
+                    ? GeoTaxMapStyles.resolveStyleFromType(t)
+                    : { color: t.color || '#607d8b', lineStyle: 'solid', fillPattern: 'solid' };
+                const mini = window.GeoTaxMapStyles
+                    ? GeoTaxMapStyles.renderPreviewSvg(style, 28, 18)
+                    : `<span class="map-legend-dot" style="background:${style.color}"></span>`;
+                return `<span class="map-legend-item map-legend-item-styled" title="${GeoTaxMapStyles?.LINE_STYLES?.[style.lineStyle]?.label || ''} · ${GeoTaxMapStyles?.FILL_PATTERNS?.[style.fillPattern]?.label || ''}">${mini}${t.icon ? t.icon + ' ' : ''}${t.nom}</span>`;
+            }).join('');
+        }
+
+        async function refreshMapLegend() {
+            renderMapLegend(commercesData);
+        }
+
+        function clearPoiWizardMapLayers() {
+            if (poiWizardStartMarker && map) {
+                map.removeLayer(poiWizardStartMarker);
+                poiWizardStartMarker = null;
+            }
+            if (poiWizardPreviewLayer && map) {
+                map.removeLayer(poiWizardPreviewLayer);
+                poiWizardPreviewLayer = null;
+            }
+            GeoTaxMapFeatures.stopTrace();
+        }
+
+        function hidePoiWizardPanels() {
+            document.getElementById('poiWizardStartPanel').hidden = true;
+            document.getElementById('poiWizardStartStep').hidden = false;
+            document.getElementById('poiWizardTraceStep').hidden = true;
+            document.getElementById('poiWizardConfirmStep').hidden = true;
+        }
+
+        function cancelPoiWizardDraw(clearSession) {
+            poiWizardDrawShape = null;
+            poiWizardStartLatLng = null;
+            addPoiMode = false;
+            window.addPoiMode = false;
+            hidePoiWizardPanels();
+            map?.getContainer()?.classList.remove('map-click-position-mode');
+            GeoTaxMapFeatures.stopDraw();
+            clearPoiWizardMapLayers();
+            if (clearSession !== false) {
+                PoiWizard.clearPending();
+            }
+        }
+
+        function showPoiWizardStartPanel(shapeId) {
+            const panel = document.getElementById('poiWizardStartPanel');
+            const shape = PoiWizard.getShape(shapeId);
+            document.getElementById('poiWizardStartTitle').textContent =
+                `${shape?.icon || ''} ${shape?.label || shapeId} — position de départ`;
+            document.getElementById('poiWizardStartIntro').textContent =
+                'Indiquez le point de départ (GPS ou « Prendre ma position »), puis marquez-le. ' +
+                (shapeId === 'pipeline'
+                    ? 'Ensuite, reliez le départ à l\'arrivée via des points GPS ou des clics sur la carte.'
+                    : (shapeId === 'parcel' || shapeId === 'perimeter')
+                        ? 'Ensuite, ajoutez les sommets — le polygone se fermera automatiquement sur le départ.'
+                        : 'Ce point sera la position du POI.');
+            document.getElementById('poiStartLat').value = '';
+            document.getElementById('poiStartLng').value = '';
+            document.getElementById('poiWizardStartStep').hidden = false;
+            document.getElementById('poiWizardTraceStep').hidden = true;
+            document.getElementById('poiWizardConfirmStep').hidden = true;
+            panel.hidden = false;
+        }
+
+        function poiWizardTakeMyPosition() {
+            if (!navigator.geolocation) {
+                alert('La géolocalisation n\'est pas disponible sur cet appareil.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    document.getElementById('poiStartLat').value = pos.coords.latitude.toFixed(6);
+                    document.getElementById('poiStartLng').value = pos.coords.longitude.toFixed(6);
+                },
+                (err) => alert('Impossible d\'obtenir la position : ' + err.message),
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
+        }
+
+        function poiWizardMarkStartPoint() {
+            const lat = parseFloat(document.getElementById('poiStartLat').value);
+            const lng = parseFloat(document.getElementById('poiStartLng').value);
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('Saisissez une latitude et une longitude valides, ou utilisez « Prendre ma position ».');
+                return;
+            }
+
+            poiWizardStartLatLng = { lat, lng };
+            PoiWizard.savePending({
+                shape: poiWizardDrawShape,
+                step: 'trace',
+                startLat: lat,
+                startLng: lng,
+                geometry: null,
+            });
+
+            if (poiWizardStartMarker) map.removeLayer(poiWizardStartMarker);
+            poiWizardStartMarker = L.circleMarker([lat, lng], {
+                radius: 12,
+                color: '#fff',
+                weight: 3,
+                fillColor: '#2196F3',
+                fillOpacity: 1,
+            }).addTo(map).bindPopup('<strong>Point de départ</strong>').openPopup();
+            map.setView([lat, lng], 17);
+
+            const shapeId = poiWizardDrawShape;
+            if (shapeId === 'point' || shapeId === 'pylon') {
+                document.getElementById('poiWizardStartStep').hidden = true;
+                document.getElementById('poiWizardConfirmStep').hidden = false;
+                return;
+            }
+
+            document.getElementById('poiWizardStartStep').hidden = true;
+            document.getElementById('poiWizardTraceStep').hidden = false;
+            updatePoiWizardTraceUI(1, GeoTaxMapFeatures.getTracePointsInfo());
+
+            const isPolygon = shapeId === 'parcel' || shapeId === 'perimeter';
+            const hints = {
+                pipeline: 'Reliez le départ à l\'arrivée : cliquez sur la carte ou saisissez des coordonnées GPS. '
+                    + 'Le 1er clic après le départ définit l\'arrivée ; les suivants sont des points intermédiaires.',
+                parcel: 'Ajoutez les sommets du polygone (GPS ou clic). Le tracé se fermera automatiquement sur le point de départ (D).',
+                perimeter: 'Ajoutez les sommets du périmètre (GPS ou clic). Le tracé se fermera automatiquement sur le point de départ (D).',
+            };
+            document.getElementById('poiWizardTraceHint').textContent = hints[shapeId] || 'Ajoutez des points sur la carte ou via GPS.';
+
+            document.getElementById('poiTraceStartCoords').textContent =
+                `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            document.getElementById('poiTraceEndSummary').hidden = isPolygon;
+            document.getElementById('poiTraceAddEndBtn').hidden = isPolygon;
+            document.getElementById('poiTraceFinishBtn').textContent = isPolygon
+                ? '✓ Fermer le polygone'
+                : '✓ Terminer le tracé';
+
+            GeoTaxMapFeatures.startTraceFromOrigin(shapeId, poiWizardStartLatLng, {
+                onPointsUpdate: updatePoiWizardTraceUI,
+                onComplete: (featureType, geometry, layer) => {
+                    poiWizardPreviewLayer = layer;
+                    PoiWizard.onGeometryDrawn(featureType, geometry);
+                },
+            });
+        }
+
+        const TRACE_ROLE_LABELS = { start: 'Départ', end: 'Arrivée', waypoint: 'Intermédiaire' };
+
+        function renderPoiTracePointsList(points) {
+            const container = document.getElementById('poiTracePointsList');
+            if (!container) return;
+            if (!points || points.length <= 1) {
+                container.innerHTML = '<p class="poi-trace-points-empty">Aucun point intermédiaire pour l\'instant.</p>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="poi-trace-points-table">
+                    <thead><tr><th>#</th><th>Rôle</th><th>Coordonnées</th><th></th></tr></thead>
+                    <tbody>
+                        ${points.map(p => `
+                            <tr>
+                                <td>${p.index + 1}</td>
+                                <td>${TRACE_ROLE_LABELS[p.role] || p.role}${p.role === 'start' && (poiWizardDrawShape === 'parcel' || poiWizardDrawShape === 'perimeter') ? ' (fermeture)' : ''}</td>
+                                <td><code>${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</code></td>
+                                <td>${p.index > 0 ? `<button type="button" class="btn-small" onclick="poiWizardRemoveTracePoint(${p.index})" title="Supprimer">✕</button>` : ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function updatePoiWizardTraceUI(count, points) {
+            const shapeId = poiWizardDrawShape;
+            const isPolygon = shapeId === 'parcel' || shapeId === 'perimeter';
+            const min = shapeId === 'pipeline' ? 2 : 3;
+            const pts = points || GeoTaxMapFeatures.getTracePointsInfo();
+            const el = document.getElementById('poiWizardTraceCount');
+            if (el) {
+                if (isPolygon) {
+                    el.textContent = `${count} sommet(s) — minimum ${min} (fermeture automatique sur le départ)`;
+                } else {
+                    const hasEnd = pts.some(p => p.role === 'end');
+                    el.textContent = hasEnd
+                        ? `${count} point(s) — départ → arrivée définis`
+                        : `${count} point(s) — définissez le point d'arrivée (min. ${min})`;
+                }
+            }
+            const endPoint = pts.find(p => p.role === 'end');
+            const startPoint = pts.find(p => p.role === 'start');
+            const startEl = document.getElementById('poiTraceStartCoords');
+            if (startPoint && startEl) {
+                startEl.textContent = `${startPoint.lat.toFixed(6)}, ${startPoint.lng.toFixed(6)}`;
+            }
+            const endSummary = document.getElementById('poiTraceEndSummary');
+            const endCoords = document.getElementById('poiTraceEndCoords');
+            if (endSummary && endCoords && !isPolygon) {
+                endSummary.hidden = !endPoint;
+                if (endPoint) {
+                    endCoords.textContent = `${endPoint.lat.toFixed(6)}, ${endPoint.lng.toFixed(6)}`;
+                }
+            }
+            renderPoiTracePointsList(pts);
+        }
+
+        function poiWizardTakeGpsForTrace() {
+            if (!navigator.geolocation) {
+                alert('La géolocalisation n\'est pas disponible.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    document.getElementById('poiTraceLat').value = pos.coords.latitude.toFixed(6);
+                    document.getElementById('poiTraceLng').value = pos.coords.longitude.toFixed(6);
+                },
+                (err) => alert('Impossible d\'obtenir la position : ' + err.message),
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
+        }
+
+        function poiWizardAddGpsPoint(role) {
+            const lat = parseFloat(document.getElementById('poiTraceLat').value);
+            const lng = parseFloat(document.getElementById('poiTraceLng').value);
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('Saisissez une latitude et une longitude valides.');
+                return;
+            }
+            const isPolygon = poiWizardDrawShape === 'parcel' || poiWizardDrawShape === 'perimeter';
+            const effectiveRole = isPolygon ? 'waypoint' : role;
+            GeoTaxMapFeatures.addTracePoint(lat, lng, effectiveRole);
+            document.getElementById('poiTraceLat').value = '';
+            document.getElementById('poiTraceLng').value = '';
+            if (map) map.setView([lat, lng], Math.max(map.getZoom(), 15));
+        }
+
+        function poiWizardRemoveTracePoint(index) {
+            GeoTaxMapFeatures.removeTracePointAt(index);
+        }
+
+        function poiWizardUndoTracePoint() {
+            const count = GeoTaxMapFeatures.undoTracePoint();
+            updatePoiWizardTraceUI(count || 1, GeoTaxMapFeatures.getTracePointsInfo());
+        }
+
+        function poiWizardFinishTrace() {
+            GeoTaxMapFeatures.finishTrace();
+        }
+
+        function poiWizardConfirmSinglePoint() {
+            if (!poiWizardStartLatLng || !poiWizardDrawShape) return;
+            const { lat, lng } = poiWizardStartLatLng;
+            poiWizardPreviewLayer = poiWizardStartMarker;
+            PoiWizard.onGeometryDrawn(poiWizardDrawShape, {
+                type: 'Point',
+                coordinates: [lng, lat],
+            });
+        }
+
+        window.PoiWizardOnCarte = function (shapeId) {
+            cancelPoiWizardDraw(false);
+            poiWizardDrawShape = shapeId;
+            PoiWizard.savePending({
+                shape: shapeId,
+                step: 'start_position',
+                geometry: null,
+                startLat: null,
+                startLng: null,
+            });
+            showPoiWizardStartPanel(shapeId);
+        };
+
+        function onMapClick(e) {
+            const panel = document.getElementById('poiWizardStartPanel');
+            if (!panel || panel.hidden || !poiWizardDrawShape) return;
+            if (document.getElementById('poiWizardStartStep').hidden) return;
+
+            document.getElementById('poiStartLat').value = e.latlng.lat.toFixed(6);
+            document.getElementById('poiStartLng').value = e.latlng.lng.toFixed(6);
+        }
+
+        function displayCommerces(commerces) {
+            try {
                 if (!map) {
                     console.error('La carte n\'est pas initialisée');
                     return;
                 }
-                
-                // Supprimer les anciens marqueurs
-                markers.forEach(marker => {
-                    try {
-                        map.removeLayer(marker);
-                    } catch (e) {
-                        console.warn('Erreur lors de la suppression d\'un marqueur:', e);
-                    }
-                });
-                markers = [];
 
-                if (commerces.length === 0) {
-                    console.warn('Aucun commerce à afficher');
-                    return;
-                }
-
+                const visibleIds = new Set();
                 let targetMarker = null;
 
-                // Créer les marqueurs
-                commerces.forEach((commerce, index) => {
+                commerces.forEach((commerce) => {
                     try {
                         const lat = parseFloat(commerce.latitude);
                         const lng = parseFloat(commerce.longitude);
-                        
-                        if (isNaN(lat) || isNaN(lng)) {
-                            console.warn(`Coordonnées invalides pour le commerce ${commerce.nom}: lat=${commerce.latitude}, lng=${commerce.longitude}`);
+                        if (isNaN(lat) || isNaN(lng)) return;
+
+                        visibleIds.add(commerce.id);
+
+                        if (markersById.has(commerce.id)) {
+                            if (targetCommerceId && commerce.id === targetCommerceId) {
+                                targetMarker = markersById.get(commerce.id);
+                            }
                             return;
                         }
-                        
-                        console.log(`Ajout du marqueur ${index + 1}/${commerces.length}: ${commerce.nom} à [${lat}, ${lng}]`);
-                        
+
                         const isPaye = commerce.a_jour;
                         const isTarget = targetCommerceId && commerce.id === targetCommerceId;
-                        const iconColor = isTarget ? 'blue' : (isPaye ? 'green' : 'red');
+                        const mapStyle = window.GeoTaxMapStyles
+                            ? GeoTaxMapStyles.resolveStyleFromProps(commerce)
+                            : { color: getTypeColor(commerce), lineStyle: 'solid', fillPattern: 'solid' };
                         const iconSize = isTarget ? 40 : 30;
-                        
-                        const customIcon = L.divIcon({
-                            className: 'custom-marker',
-                            html: `<div style="
+                        const emoji = commerce.type_commerce?.icon || '📍';
+
+                        let markerHtml;
+                        if (window.GeoTaxMapStyles && !isTarget) {
+                            markerHtml = GeoTaxMapStyles.buildMarkerIconHtml(mapStyle, emoji);
+                        } else {
+                            const iconColor = isTarget ? '#2196F3' : mapStyle.color;
+                            const borderColor = isPaye ? '#fff' : '#ffeb3b';
+                            markerHtml = `<div style="
                                 background-color: ${iconColor};
                                 width: ${iconSize}px;
                                 height: ${iconSize}px;
                                 border-radius: 50% 50% 50% 0;
                                 transform: rotate(-45deg);
-                                border: 3px solid white;
+                                border: 3px solid ${borderColor};
                                 box-shadow: 0 2px 5px rgba(0,0,0,0.3);
                                 ${isTarget ? 'animation: pulse 2s infinite;' : ''}
-                            "></div>`,
+                            "></div>`;
+                        }
+
+                        const customIcon = L.divIcon({
+                            className: 'custom-marker',
+                            html: markerHtml,
                             iconSize: [iconSize, iconSize],
                             iconAnchor: [iconSize/2, iconSize]
                         });
 
                         const marker = L.marker([lat, lng], { icon: customIcon })
-                            .addTo(map)
                             .bindPopup(createPopupContent(commerce));
 
+                        addMarkerToMap(marker);
                         markers.push(marker);
-                        
-                        if (isTarget) {
-                            targetMarker = marker;
-                        }
+                        markersById.set(commerce.id, marker);
+
+                        if (isTarget) targetMarker = marker;
                     } catch (error) {
-                        console.error(`Erreur lors de l'ajout du marqueur pour ${commerce.nom}:`, error);
+                        console.error(`Erreur marqueur ${commerce.nom}:`, error);
                     }
                 });
 
-                console.log(`${markers.length} marqueurs ajoutés sur la carte`);
+                [...markersById.keys()].forEach(id => {
+                    if (!visibleIds.has(id)) removeMarkerById(id);
+                });
 
-                // Centrer sur le commerce cible ou ajuster la vue pour afficher tous les marqueurs
                 if (targetMarker) {
-                    console.log('Centrage sur le commerce cible');
                     map.setView([targetMarker.getLatLng().lat, targetMarker.getLatLng().lng], 16);
                     setTimeout(() => targetMarker.openPopup(), 500);
-                } else if (markers.length > 0) {
-                    console.log('Ajustement de la vue pour afficher tous les marqueurs');
-                    const group = new L.featureGroup(markers);
-                    map.fitBounds(group.getBounds().pad(0.1));
+                } else if (!initialMapFitDone && markers.length > 0) {
+                    fitMapToMarkers();
+                    initialMapFitDone = true;
                 }
             } catch (error) {
-                console.error('Erreur lors de l\'affichage des commerces:', error);
+                console.error('Erreur affichage commerces:', error);
                 alert('Erreur lors de l\'affichage des commerces: ' + error.message);
             }
         }
 
-        // Afficher les commerces sur Google Maps
-        function displayCommercesGoogle(commerces) {
-            // Supprimer les anciens marqueurs
-            markers.forEach(marker => marker.setMap(null));
-            markers = [];
+        function fitMapToMarkers() {
+            if (!map || markers.length === 0) return;
+            const group = clusteringEnabled && markerClusterGroup
+                ? markerClusterGroup
+                : L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1), { maxZoom: 16 });
+        }
 
-            if (commerces.length === 0) {
-                alert('Aucun commerce géolocalisé trouvé');
+        function removeBaseLayers() {
+            if (!map) return;
+            [googlePlanLayer, googleSatelliteLayer, googleHybridBaseLayer, googleHybridLabelsLayer, osmLayer].forEach(layer => {
+                if (layer && map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+        }
+
+        function setBaseLayer(type) {
+            if (!map) return;
+
+            removeBaseLayers();
+
+            if (type === 'plan') {
+                googlePlanLayer.addTo(map);
+            } else if (type === 'satellite') {
+                googleSatelliteLayer.addTo(map);
+            } else if (type === 'hybrid') {
+                googleHybridBaseLayer.addTo(map);
+                googleHybridLabelsLayer.addTo(map);
+            } else if (type === 'osm') {
+                osmLayer.addTo(map);
+            } else {
+                googlePlanLayer.addTo(map);
+                type = 'plan';
+            }
+
+            currentBaseLayer = type;
+            map.invalidateSize();
+            setTimeout(() => map.eachLayer(layer => {
+                if (layer.redraw) layer.redraw();
+            }), 50);
+        }
+
+        function updateMapButtons(type) {
+            document.getElementById('btnPlan').classList.toggle('active', type === 'plan');
+            document.getElementById('btnSatellite').classList.toggle('active', type === 'satellite');
+            document.getElementById('btnHybrid').classList.toggle('active', type === 'hybrid');
+            document.getElementById('btnOsm').classList.toggle('active', type === 'osm');
+        }
+
+        function switchMap(type) {
+            currentMapType = type;
+            updateMapButtons(type);
+
+            if (!map) {
+                initMap(type);
                 return;
             }
 
-            const bounds = new google.maps.LatLngBounds();
-            let targetMarker = null;
+            setBaseLayer(type);
+        }
 
-            commerces.forEach(commerce => {
-                const isPaye = commerce.a_jour;
-                const isTarget = targetCommerceId && commerce.id === targetCommerceId;
-                const iconColor = isTarget ? 'blue' : (isPaye ? 'green' : 'red');
-                const iconScale = isTarget ? 15 : 10;
-                
-                const marker = new google.maps.Marker({
-                    position: { lat: commerce.latitude, lng: commerce.longitude },
-                    map: googleMap,
-                    title: commerce.nom,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: iconScale,
-                        fillColor: iconColor,
-                        fillOpacity: 1,
-                        strokeColor: 'white',
-                        strokeWeight: 2
-                    }
-                });
+        function centerMap() {
+            fitMapToMarkers();
+        }
 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: createPopupContent(commerce)
-                });
-
-                marker.addListener('click', () => {
-                    infoWindow.open(googleMap, marker);
-                });
-
-                markers.push(marker);
-                bounds.extend({ lat: commerce.latitude, lng: commerce.longitude });
-                
-                if (isTarget) {
-                    targetMarker = marker;
-                }
-            });
-
-            // Centrer sur le commerce cible ou ajuster la vue pour afficher tous les marqueurs
-            if (targetMarker) {
-                googleMap.setCenter(targetMarker.getPosition());
-                googleMap.setZoom(16);
-                const infoWindow = new google.maps.InfoWindow({
-                    content: createPopupContent(commerces.find(c => c.id === targetCommerceId))
-                });
-                infoWindow.open(googleMap, targetMarker);
-            } else if (markers.length > 0) {
-                googleMap.fitBounds(bounds);
+        function hideGeocodeResults() {
+            const box = document.getElementById('mapGeocodeResults');
+            if (box) {
+                box.style.display = 'none';
+                box.innerHTML = '';
             }
         }
 
-        // Créer le contenu du popup
+        function showGeocodeResults(results) {
+            const box = document.getElementById('mapGeocodeResults');
+            if (!box) return;
+
+            if (!results.length) {
+                box.innerHTML = '<div class="map-geocode-result-item" style="cursor:default;color:#888;">Aucun résultat trouvé</div>';
+                box.style.display = 'block';
+                return;
+            }
+
+            box.innerHTML = results.map((r, idx) => `
+                <button type="button" class="map-geocode-result-item" data-idx="${idx}">
+                    ${r.label}
+                    ${r.type ? `<span class="map-geocode-result-type">${r.type}</span>` : ''}
+                </button>
+            `).join('');
+
+            box.querySelectorAll('.map-geocode-result-item[data-idx]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const item = results[parseInt(btn.dataset.idx, 10)];
+                    goToGeocodeResult(item);
+                });
+            });
+            box.style.display = 'block';
+        }
+
+        function goToGeocodeResult(result) {
+            if (!map || !result) return;
+            hideGeocodeResults();
+
+            if (geocodeMarker) {
+                map.removeLayer(geocodeMarker);
+            }
+            geocodeMarker = L.circleMarker([result.lat, result.lng], {
+                radius: 12,
+                color: '#fff',
+                weight: 3,
+                fillColor: '#2196F3',
+                fillOpacity: 0.9,
+            }).addTo(map).bindPopup(result.label).openPopup();
+
+            map.setView([result.lat, result.lng], 17);
+            document.getElementById('mapGeocodeInput').value = result.label.split(',')[0];
+        }
+
+        async function searchMapAddress() {
+            const input = document.getElementById('mapGeocodeInput');
+            const query = input?.value.trim();
+            if (!query || query.length < 3) {
+                alert('Saisissez au moins 3 caractères pour rechercher une adresse.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erreur de géocodage');
+                }
+                showGeocodeResults(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Géocodage:', error);
+                alert('Impossible de rechercher l\'adresse : ' + error.message);
+            }
+        }
+
+        function scheduleGeocodeSearch() {
+            clearTimeout(geocodeDebounceTimer);
+            geocodeDebounceTimer = setTimeout(() => {
+                const query = document.getElementById('mapGeocodeInput')?.value.trim();
+                if (query && query.length >= 4) {
+                    searchMapAddress();
+                } else {
+                    hideGeocodeResults();
+                }
+            }, 500);
+        }
         function createPopupContent(commerce) {
+            const isContribuable = (commerce.categorie || 'contribuable') === 'contribuable';
+            const catLabel = isContribuable ? 'Contribuable' : 'Infrastructure';
             const statusClass = commerce.a_jour ? 'status-paye' : 'status-non-paye';
-            const statusText = commerce.a_jour ? '✅ À JOUR' : '❌ NON À JOUR';
-            
+            const statusText = isContribuable
+                ? (commerce.a_jour ? '✅ À JOUR' : '❌ NON À JOUR')
+                : catLabel;
+
             return `
                 <div class="popup-content">
                     <div class="popup-title">${commerce.nom}</div>
                     <div class="popup-info"><strong>Code:</strong> ${commerce.code_unique}</div>
+                    <div class="popup-info"><strong>Catégorie:</strong> ${catLabel}</div>
                     ${commerce.proprietaire ? `<div class="popup-info"><strong>Propriétaire:</strong> ${commerce.proprietaire}</div>` : ''}
                     ${commerce.telephone ? `<div class="popup-info"><strong>Téléphone:</strong> ${commerce.telephone}</div>` : ''}
                     ${commerce.adresse ? `<div class="popup-info"><strong>Adresse:</strong> ${commerce.adresse}</div>` : ''}
-                    ${commerce.type_commerce ? `<div class="popup-info"><strong>Type:</strong> ${commerce.type_commerce.nom}</div>` : ''}
-                    <div class="popup-info">
-                        <span class="popup-status ${statusClass}">${statusText}</span>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <a href="/scan?code=${commerce.code_unique}" target="_blank" style="color: #667eea; text-decoration: none;">🔍 Vérifier</a> |
-                        <a href="/api/boutiques/${commerce.id}/qr" target="_blank" style="color: #667eea; text-decoration: none;">📱 QR Code</a>
+                    ${commerce.type_commerce ? `<div class="popup-info"><strong>Activité:</strong> ${commerce.type_commerce.nom}</div>` : ''}
+                    <div class="popup-info"><strong>Validation:</strong> ${commerce.statut_validation || 'valide'}</div>
+                    ${isContribuable ? `<div class="popup-info"><span class="popup-status ${statusClass}">${statusText}</span></div>` : ''}
+                    <div class="popup-actions">
+                        <a href="/scan?code=${commerce.code_unique}" target="_blank">🔍 Vérifier</a>
+                        ${isContribuable ? `<span>|</span><a href="/api/boutiques/${commerce.id}/qr" target="_blank">📱 QR Code</a>` : ''}
+                        <button type="button" class="map-popup-edit-btn" onclick="editMapBoutique(${commerce.id})">✏️ Modifier</button>
+                        <button type="button" class="map-popup-delete-btn" onclick="deleteMapBoutique(${commerce.id})">🗑️ Supprimer</button>
                     </div>
                 </div>
             `;
         }
 
-        // Basculer entre les cartes
-        function switchMap(type) {
-            currentMapType = type;
-            
-            if (type === 'osm') {
-                document.getElementById('mapContainer').style.display = 'block';
-                document.getElementById('googleMapContainer').style.display = 'none';
-                document.getElementById('btnOpenStreetMap').classList.add('active');
-                document.getElementById('btnGoogleMap').classList.remove('active');
-                
-                if (!map) {
-                    initMap();
-                } else {
-                    loadCommerces();
-                }
-            } else if (type === 'google') {
-                if (typeof google === 'undefined' || !google.maps) {
-                    alert('Google Maps API non configurée. Veuillez ajouter votre clé API dans le fichier carte.html ou utilisez OpenStreetMap.');
-                    return;
-                }
-                
-                document.getElementById('mapContainer').style.display = 'none';
-                document.getElementById('googleMapContainer').style.display = 'block';
-                document.getElementById('btnOpenStreetMap').classList.remove('active');
-                document.getElementById('btnGoogleMap').classList.add('active');
-                
-                if (googleMap) {
-                    loadCommercesGoogle();
-                } else {
-                    initGoogleMap();
-                    // Attendre que Google Maps soit chargé
-                    const checkGoogleMap = setInterval(() => {
-                        if (googleMap) {
-                            clearInterval(checkGoogleMap);
-                            loadCommercesGoogle();
-                        }
-                    }, 100);
-                }
-            }
+        function updateMapFeatureCounts(counts, total) {
+            document.getElementById('totalMapFeatures').textContent = total || 0;
+            document.getElementById('countPylon').textContent = counts?.pylon || 0;
+            document.getElementById('countPipeline').textContent = counts?.pipeline || 0;
+            document.getElementById('countParcel').textContent = counts?.parcel || 0;
+            document.getElementById('countPerimeter').textContent = counts?.perimeter || 0;
         }
 
-        // Charger les commerces pour Google Maps
-        function loadCommercesGoogle() {
-            const commercesAvecCoords = commercesData.filter(c => c.latitude && c.longitude);
-            displayCommercesGoogle(commercesAvecCoords);
-        }
-
-        // Recentrer la carte
-        function centerMap() {
-            if (currentMapType === 'osm' && map && markers.length > 0) {
-                const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds().pad(0.1));
-            } else if (currentMapType === 'google' && googleMap && markers.length > 0) {
-                const bounds = new google.maps.LatLngBounds();
-                markers.forEach(marker => bounds.extend(marker.getPosition()));
-                googleMap.fitBounds(bounds);
-            }
-        }
-
-        // Actualiser la carte
         function refreshMap() {
             loadCommerces();
+            GeoTaxMapFeatures.loadFeatures().then(() => refreshMapLegend());
         }
+
+        async function deleteMapBoutique(boutiqueId) {
+            const commerce = commercesData.find(c => c.id === boutiqueId);
+            const nom = commerce?.nom || 'ce POI';
+            if (!confirm(`Désactiver le POI « ${nom} » ?\n\nIl disparaîtra de la carte. L'historique des paiements est conservé.`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/boutiques/${boutiqueId}`, { method: 'DELETE', credentials: 'include' });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Erreur lors de la suppression');
+                map.closePopup();
+                await loadCommerces();
+            } catch (error) {
+                alert('Impossible de supprimer : ' + error.message);
+            }
+        }
+
+        async function deleteMapFeature(featureId) {
+            if (!confirm('Désactiver ce POI ?\n\nIl disparaîtra de la carte.')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/boutiques/${featureId}`, { method: 'DELETE', credentials: 'include' });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Erreur lors de la suppression');
+                map.closePopup();
+                await GeoTaxMapFeatures.loadFeatures();
+            } catch (error) {
+                alert('Impossible de supprimer : ' + error.message);
+            }
+        }
+
+        window.deleteMapBoutique = deleteMapBoutique;
+        window.deleteMapFeature = deleteMapFeature;
+
+        function editMapBoutique(boutiqueId) {
+            map?.closePopup();
+            window.location.href = `/pois?edit_boutique=${boutiqueId}`;
+        }
+
+        window.editMapFeature = function (featureId) {
+            map?.closePopup();
+            window.location.href = `/pois?edit_boutique=${featureId}`;
+        };
+        window.editMapBoutique = editMapBoutique;
 
         // Mettre à jour les statistiques
         function updateStats(commerces) {
@@ -516,8 +1291,42 @@
         }
 
         // Initialiser la carte au chargement
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.GeoTaxCountry) {
+                try {
+                    await GeoTaxCountry.loadFromSession();
+                } catch (e) {
+                    console.warn('Pays (carte):', e);
+                }
+            }
             initMap();
+
+            const geocodeInput = document.getElementById('mapGeocodeInput');
+            geocodeInput?.addEventListener('input', scheduleGeocodeSearch);
+            geocodeInput?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchMapAddress();
+                }
+                if (e.key === 'Escape') hideGeocodeResults();
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.map-search-input-wrap')) {
+                    hideGeocodeResults();
+                }
+            });
+            if (window.GeoTaxCountry) {
+                GeoTaxCountry.onChange(async () => {
+                    initialMapFitDone = false;
+                    if (map) {
+                        GeoTaxCountry.centerMap(map);
+                    }
+                    await loadCommerces();
+                    if (window.GeoTaxMapFeatures?.loadFeatures) {
+                        await GeoTaxMapFeatures.loadFeatures();
+                    }
+                });
+            }
         });
     </script>
 </body>

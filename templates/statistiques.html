@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiques — GeoTax</title>
+    {% include '_head.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}" />
+    <script src="{{ url_for('static', filename='vendor/chart.js/chart.umd.min.js') }}"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            {% include '_header_top.html' %}
+        </header>
+
+        <main class="stats-page">
+            <div class="page-header">
+                <p class="page-eyebrow">Analyse</p>
+                <h1 class="page-title">Statistiques</h1>
+                <p class="page-subtitle">Indicateurs et graphiques par thème — filtres périodiques pour le recouvrement fiscal</p>
+            </div>
+
+            <div class="stats-page-toolbar">
+                <div class="balances-period-selector stats-period-selector">
+                    <label>Période du</label>
+                    <select id="statsMoisDebut">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                    <select id="statsAnneeDebut"></select>
+                    <label>au</label>
+                    <select id="statsMoisFin">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                    <select id="statsAnneeFin"></select>
+                    <button type="button" class="btn btn-primary btn-small" onclick="loadStatistiques()">Actualiser</button>
+                </div>
+                <p id="statsPeriodLabel" class="stats-period-label"></p>
+            </div>
+
+            <nav class="stats-theme-nav" aria-label="Thèmes statistiques">
+                <a href="#theme-overview" class="stats-theme-link">Vue d'ensemble</a>
+                <a href="#theme-contribuables" class="stats-theme-link">Contribuables</a>
+                <a href="#theme-referentiel" class="stats-theme-link">Référentiel POI</a>
+                <a href="#theme-geographie" class="stats-theme-link">Géographie</a>
+                <a href="#theme-fiscal" class="stats-theme-link">Fiscal & recouvrement</a>
+                <a href="#theme-infrastructures" class="stats-theme-link">Infrastructures</a>
+                <a href="#theme-analyse-technique" class="stats-theme-link">Analyses techniques</a>
+                <a href="#theme-validation" class="stats-theme-link">Validation</a>
+            </nav>
+
+            <!-- Vue d'ensemble -->
+            <section id="theme-overview" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">📊</span>
+                    <div>
+                        <h2>Vue d'ensemble</h2>
+                        <p class="section-desc">Synthèse globale du parc POI et du recouvrement sur la période.</p>
+                    </div>
+                </header>
+                <div class="stats-grid" id="overviewKpis"></div>
+            </section>
+
+            <!-- Contribuables -->
+            <section id="theme-contribuables" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">🏪</span>
+                    <div>
+                        <h2>Contribuables</h2>
+                        <p class="section-desc">Répartition des contribuables validés par type d'activité et statut de validation.</p>
+                    </div>
+                </header>
+                <div class="stats-grid" id="contribKpis"></div>
+                <div id="contribBreakdown" class="stats-breakdown-grid"></div>
+            </section>
+
+            <!-- Référentiel -->
+            <section id="theme-referentiel" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">📋</span>
+                    <div>
+                        <h2>Référentiel POI</h2>
+                        <p class="section-desc">Répartition par catégorie, secteur, type d'activité et forme géométrique.</p>
+                    </div>
+                </header>
+                <div class="stats-charts-grid">
+                    <div class="chart-card"><h3>Catégorie</h3><div class="chart-container"><canvas id="chartCategorie"></canvas></div></div>
+                    <div class="chart-card"><h3>Secteur d'activité</h3><div class="chart-container"><canvas id="chartSecteur"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Type d'activité</h3><div class="chart-container chart-bar"><canvas id="chartParType"></canvas></div></div>
+                    <div class="chart-card"><h3>Forme géométrique</h3><div class="chart-container"><canvas id="chartForme"></canvas></div></div>
+                </div>
+            </section>
+
+            <!-- Géographie -->
+            <section id="theme-geographie" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">🗺️</span>
+                    <div>
+                        <h2>Géographie</h2>
+                        <p class="section-desc">Répartition territoriale des POI.</p>
+                    </div>
+                </header>
+                <div class="stats-charts-grid">
+                    <div class="chart-card chart-card-wide"><h3>Par arrondissement / commune</h3><div class="chart-container chart-bar"><canvas id="chartParArrondissement"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Top quartiers / villages</h3><div class="chart-container chart-bar"><canvas id="chartParQuartier"></canvas></div></div>
+                </div>
+                <div class="stats-drilldown-grid">
+                    <div class="chart-card">
+                        <h3>Type × arrondissement</h3>
+                        <div class="filters chart-filter">
+                            <label for="selectType">Type d'activité</label>
+                            <select id="selectType" onchange="updateChartTypeArrondissement()">
+                                <option value="">— Sélectionner —</option>
+                            </select>
+                        </div>
+                        <div class="chart-container"><canvas id="chartTypeArrondissement"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Type × quartier</h3>
+                        <div class="filters chart-filter">
+                            <label for="selectTypeQuartier">Type d'activité</label>
+                            <select id="selectTypeQuartier" onchange="updateChartTypeQuartier()">
+                                <option value="">— Sélectionner —</option>
+                            </select>
+                        </div>
+                        <div class="chart-container"><canvas id="chartTypeQuartier"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fiscal -->
+            <section id="theme-fiscal" class="stats-theme-block stats-theme-fiscal">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">💰</span>
+                    <div>
+                        <h2>Fiscal & recouvrement</h2>
+                        <p class="section-desc">Indicateurs de paiement et montants recouvrés — période sélectionnée ci-dessus.</p>
+                    </div>
+                </header>
+                <div class="stats-charts-grid">
+                    <div class="chart-card"><h3>Statut paiement (contribuables)</h3><div class="chart-container"><canvas id="chartStatutPaiement"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Évolution des encaissements</h3><div class="chart-container chart-bar"><canvas id="chartEvolutionPaiements"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Recouvrement par institution</h3><div class="chart-container chart-bar"><canvas id="chartInstituts"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Recouvrement par taxe</h3><div class="chart-container chart-bar"><canvas id="chartTaxes"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Paiement par arrondissement</h3><div class="chart-container chart-bar"><canvas id="chartFiscalArr"></canvas></div></div>
+                </div>
+            </section>
+
+            <!-- Infrastructures -->
+            <section id="theme-infrastructures" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">🏗️</span>
+                    <div>
+                        <h2>Infrastructures & analyses spatiales</h2>
+                        <p class="section-desc">Formes géographiques, métriques réseau, couverture pylônes et validation.</p>
+                    </div>
+                </header>
+                <div class="stats-grid" id="infraKpis"></div>
+                <div id="infraSpatialKpis" class="stats-grid stats-grid-secondary"></div>
+                <div id="infraBreakdown" class="stats-breakdown-grid"></div>
+                <div id="statsPylonMapPanel" class="pylon-map-panel stats-pylon-panel" hidden>
+                    <div class="pylon-coverage-toolbar">
+                        <div>
+                            <h3 class="poi-stats-title">Carte des pylônes — zones de couverture</h3>
+                            <p class="field-help">Rayons d'influence calculés à partir du champ « rayon » de chaque pylône (union PostGIS pour la surface nette).</p>
+                        </div>
+                        <label class="pylon-coverage-toggle">
+                            <input type="checkbox" id="statsPylonShowCoverage" checked>
+                            Afficher les rayons d'influence
+                        </label>
+                    </div>
+                    <div id="pylonCoverageSummary" class="pylon-coverage-summary"></div>
+                    <div id="pylonCoverageMap" class="pylon-coverage-map" role="region" aria-label="Carte des pylônes"></div>
+                </div>
+                <div class="stats-charts-grid stats-charts-grid-secondary">
+                    <div class="chart-card chart-card-wide"><h3>Vue graphique — types d'activité</h3><div class="chart-container chart-bar"><canvas id="chartInfraType"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Métriques spatiales par forme</h3><div class="chart-container chart-bar"><canvas id="chartInfraSpatial"></canvas></div></div>
+                </div>
+            </section>
+
+            <!-- Analyses techniques -->
+            <section id="theme-analyse-technique" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">🔬</span>
+                    <div>
+                        <h2>Données techniques & analyses</h2>
+                        <p class="section-desc">Complétude et agrégats des champs techniques par type d'activité (données administratives POI).</p>
+                    </div>
+                </header>
+                <div class="stats-grid" id="techAnalysisKpis"></div>
+                <div id="techAnalysisBreakdown" class="stats-breakdown-grid"></div>
+                <div class="stats-charts-grid stats-charts-grid-secondary">
+                    <div class="chart-card chart-card-wide"><h3>Taux de remplissage — champs les plus renseignés</h3><div class="chart-container chart-bar"><canvas id="chartTechChamps"></canvas></div></div>
+                    <div class="chart-card chart-card-wide"><h3>Complétude par type d'activité</h3><div class="chart-container chart-bar"><canvas id="chartTechTypes"></canvas></div></div>
+                </div>
+                <div id="techAnalysisDetails" class="stats-tech-details"></div>
+            </section>
+
+            <!-- Validation -->
+            <section id="theme-validation" class="stats-theme-block">
+                <header class="stats-theme-header">
+                    <span class="stats-theme-icon">✅</span>
+                    <div>
+                        <h2>Validation</h2>
+                        <p class="section-desc">Suivi des statuts de validation du référentiel.</p>
+                    </div>
+                </header>
+                <div class="stats-charts-grid">
+                    <div class="chart-card"><h3>Tous POI</h3><div class="chart-container"><canvas id="chartValidationGlobal"></canvas></div></div>
+                    <div class="chart-card"><h3>Contribuables</h3><div class="chart-container"><canvas id="chartValidationContrib"></canvas></div></div>
+                    <div class="chart-card"><h3>Infrastructures</h3><div class="chart-container"><canvas id="chartValidationInfra"></canvas></div></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+    <script src="{{ url_for('static', filename='pylon-coverage-map.js') }}"></script>
+    <script>
+        const COULEURS = [
+            '#009E60', '#1565c0', '#e65100', '#6a1b9a', '#c62828', '#00838f',
+            '#2e7d32', '#fb8c00', '#5d4037', '#0288d1', '#7b1fa2', '#455a64',
+        ];
+        const VALIDATION_LABELS = {
+            brouillon: 'Brouillon',
+            en_attente: 'En attente',
+            valide: 'Validé',
+            rejete: 'Rejeté',
+        };
+        const MOIS_NOMS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+        let dataStats = null;
+        const charts = {};
+
+        function initPeriodSelects() {
+            const now = new Date();
+            document.getElementById('statsMoisDebut').value = now.getMonth() + 1;
+            document.getElementById('statsMoisFin').value = now.getMonth() + 1;
+            ['statsAnneeDebut', 'statsAnneeFin'].forEach(id => {
+                const sel = document.getElementById(id);
+                sel.innerHTML = '';
+                for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = y;
+                    if (y === now.getFullYear()) opt.selected = true;
+                    sel.appendChild(opt);
+                }
+            });
+        }
+
+        function getPeriodParams() {
+            const params = new URLSearchParams({
+                mois_debut: document.getElementById('statsMoisDebut').value,
+                annee_debut: document.getElementById('statsAnneeDebut').value,
+                mois_fin: document.getElementById('statsMoisFin').value,
+                annee_fin: document.getElementById('statsAnneeFin').value,
+            });
+            if (window.GeoTaxCountry) GeoTaxCountry.withParams(params);
+            return params;
+        }
+
+        function formatPeriodLabel(p) {
+            if (!p) return '';
+            if (p.mois_debut === p.mois_fin && p.annee_debut === p.annee_fin) {
+                return `${MOIS_NOMS[p.mois_fin - 1]} ${p.annee_fin}`;
+            }
+            return `${MOIS_NOMS[p.mois_debut - 1]} ${p.annee_debut} — ${MOIS_NOMS[p.mois_fin - 1]} ${p.annee_fin}`;
+        }
+
+        function formatFcfa(n) {
+            return new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)) + ' FCFA';
+        }
+
+        function destroyChart(id) {
+            if (charts[id]) {
+                charts[id].destroy();
+                charts[id] = null;
+            }
+        }
+
+        function topEntries(obj, limit = 12) {
+            return Object.entries(obj || {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, limit);
+        }
+
+        function makePieData(entries) {
+            if (!entries.length) {
+                return {
+                    labels: ['Aucune donnée'],
+                    datasets: [{ data: [1], backgroundColor: ['#e0e0e0'] }],
+                };
+            }
+            return {
+                labels: entries.map(e => e[0]),
+                datasets: [{
+                    data: entries.map(e => e[1]),
+                    backgroundColor: entries.map((_, i) => COULEURS[i % COULEURS.length]),
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                }],
+            };
+        }
+
+        function makeBarData(labels, datasets, horizontal = false) {
+            return {
+                labels: labels.length ? labels : ['Aucune donnée'],
+                datasets: datasets.map((ds, i) => ({
+                    ...ds,
+                    backgroundColor: ds.backgroundColor || COULEURS[i % COULEURS.length],
+                    borderRadius: 4,
+                })),
+            };
+        }
+
+        function pieOptions() {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + Number(b), 0);
+                                const pct = total > 0 ? ((Number(ctx.raw) / total) * 100).toFixed(1) : 0;
+                                return `${ctx.label} : ${ctx.raw} (${pct} %)`;
+                            },
+                        },
+                    },
+                },
+            };
+        }
+
+        function barOptions(horizontal = false, stacked = false) {
+            return {
+                indexAxis: horizontal ? 'y' : 'x',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked, grid: { display: !horizontal } },
+                    y: { stacked, beginAtZero: true, grid: { display: horizontal } },
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12 } },
+                },
+            };
+        }
+
+        function createChart(id, type, data, options) {
+            destroyChart(id);
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js non chargé pour', id);
+                return;
+            }
+            try {
+                charts[id] = new Chart(el, { type, data, options });
+            } catch (err) {
+                console.error('Erreur graphique', id, err);
+            }
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function safeRender(label, fn) {
+            try {
+                fn();
+            } catch (err) {
+                console.error(`Erreur rendu ${label}:`, err);
+            }
+        }
+
+        function renderOverviewKpis(v) {
+            const el = document.getElementById('overviewKpis');
+            if (!el || !v) return;
+            el.innerHTML = [
+                ['POI actifs', v.total_poi, 'info'],
+                ['Contribuables', v.contribuables, ''],
+                ['Infrastructures', v.infrastructures, ''],
+                ['Contrib. à jour', `${v.contribuables_a_jour} (${v.taux_paiement} %)`, 'success'],
+                ['Contrib. non à jour', v.contribuables_non_a_jour, v.contribuables_non_a_jour ? 'warning' : ''],
+                ['Montant attendu', formatFcfa(v.montant_attendu), 'warning'],
+                ['Montant recouvré', formatFcfa(v.montant_recouvre), 'success'],
+                ['Taux recouvrement', `${v.taux_recouvrement} %`, v.taux_recouvrement >= 70 ? 'success' : 'warning'],
+                ['En attente validation', v.validations_en_attente, v.validations_en_attente ? 'warning' : ''],
+            ].map(([label, value, variant]) =>
+                `<div class="stat-card ${variant || ''}"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`
+            ).join('');
+        }
+
+        function formatNumber(n, decimals) {
+            if (n == null || Number.isNaN(n)) return '—';
+            return Number(n).toLocaleString('fr-FR', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals,
+            });
+        }
+
+        function formatAreaHa(ha) {
+            if (ha == null) return '—';
+            if (ha >= 1) return `${formatNumber(ha, ha >= 100 ? 1 : 2)} ha`;
+            const m2 = ha * 10000;
+            if (m2 >= 1000000) return `${formatNumber(m2 / 1000000, 2)} km²`;
+            return `${formatNumber(m2, 0)} m²`;
+        }
+
+        function renderInfraKpis(infra) {
+            const el = document.getElementById('infraKpis');
+            if (!el || !infra) return;
+            const lengthLabel = infra.total_length_m >= 1000
+                ? `${(infra.total_length_m / 1000).toFixed(2)} km`
+                : `${Math.round(infra.total_length_m || 0)} m`;
+            el.innerHTML = [
+                ['Total infrastructures', infra.total, 'info'],
+                ['Pipelines', infra.pipelines || 0, ''],
+                ['Longueur réseau', lengthLabel, 'info'],
+                ['Parcelles', infra.parcelles || 0, ''],
+                ['Surface parcelles', `${formatNumber(infra.total_area_ha, 2)} ha`, 'info'],
+                ['Pylônes', infra.pylons || 0, ''],
+                ['Sans localisation', infra.sans_localisation || 0, infra.sans_localisation ? 'warning' : ''],
+            ].map(([label, value, variant]) =>
+                `<div class="stat-card ${variant || ''}"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`
+            ).join('');
+        }
+
+        function renderInfraSpatialKpis(infra) {
+            const el = document.getElementById('infraSpatialKpis');
+            if (!el || !infra) return;
+            const ps = infra.metriques_spatiales?.pylons || infra.couverture_pylons?.summary || {};
+            if (!ps.count && !infra.pylons) {
+                el.innerHTML = '';
+                return;
+            }
+            const cards = [
+                ['Rayon moyen pylônes', ps.avg_radius_m ? `${formatNumber(ps.avg_radius_m, 0)} m` : '—', 'info'],
+                ['Zone couverte (net)', formatAreaHa(ps.union_coverage_area_ha), 'success'],
+                ['Somme des cercles', formatAreaHa(ps.total_individual_area_ha), ''],
+                ['Chevauchements', formatAreaHa(ps.overlap_area_ha), ps.overlap_area_ha > 0 ? 'warning' : ''],
+                ['Pylônes localisés', `${ps.located_count || 0} / ${ps.count || infra.pylons || 0}`, ''],
+            ];
+            el.innerHTML = cards.map(([label, value, variant]) =>
+                `<div class="stat-card ${variant || ''}"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`
+            ).join('');
+        }
+
+        function renderPylonCoverageMap(infra) {
+            const coverage = infra?.couverture_pylons;
+            if (!window.PylonCoverageMap || !coverage?.summary?.count) {
+                const panel = document.getElementById('statsPylonMapPanel');
+                if (panel) panel.hidden = true;
+                return;
+            }
+            const showCoverage = document.getElementById('statsPylonShowCoverage')?.checked !== false;
+            PylonCoverageMap.renderAnalysis(coverage, { showCoverage });
+            setTimeout(() => PylonCoverageMap.invalidateSize(350), 200);
+        }
+
+        function renderTechAnalysisSection(analyse) {
+            const kpiEl = document.getElementById('techAnalysisKpis');
+            const breakdownEl = document.getElementById('techAnalysisBreakdown');
+            const detailsEl = document.getElementById('techAnalysisDetails');
+            if (!kpiEl || !analyse) return;
+
+            const types = analyse.par_type || [];
+            if (!types.length) {
+                kpiEl.innerHTML = '<div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Aucun champ technique paramétré</div></div>';
+                if (breakdownEl) breakdownEl.innerHTML = '';
+                if (detailsEl) detailsEl.innerHTML = '<p class="field-help">Définissez des champs techniques dans le paramétrage des types d\'activité.</p>';
+                return;
+            }
+
+            const avgCompletude = types.reduce((s, t) => s + (t.taux_completude_globale || 0), 0) / types.length;
+            const avgRemplissage = types.reduce((s, t) => s + (t.taux_remplissage_moyen || 0), 0) / types.length;
+            const totalPoi = analyse.total_poi_avec_champs || 0;
+            const totalComplets = types.reduce((s, t) => s + (t.poi_complet || 0), 0);
+
+            kpiEl.innerHTML = [
+                ['Types analysables', analyse.types_analysables, 'info'],
+                ['POI avec champs tech.', totalPoi, ''],
+                ['Fiches complètes', `${totalComplets} (${formatNumber(avgCompletude, 0)} %)`, 'success'],
+                ['Taux remplissage moyen', `${formatNumber(avgRemplissage, 0)} %`, 'info'],
+            ].map(([label, value, variant]) =>
+                `<div class="stat-card ${variant || ''}"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`
+            ).join('');
+
+            if (breakdownEl) {
+                const champsEntries = (analyse.champs_populaires || []).slice(0, 10).map(c => ({
+                    label: c.label || c.code,
+                    count: c.taux_remplissage,
+                }));
+                breakdownEl.innerHTML = renderBreakdownBars(
+                    'Champs techniques — taux de remplissage (%)',
+                    champsEntries.map(e => ({ label: e.label, count: e.count })),
+                    100,
+                );
+            }
+
+            if (detailsEl) {
+                detailsEl.innerHTML = types.map(t => {
+                    const champsRows = (t.champs || []).map(c => {
+                        let numericHtml = '';
+                        if (c.numeric) {
+                            numericHtml = `<span class="stats-tech-numeric">min ${formatNumber(c.numeric.min, 0)} · max ${formatNumber(c.numeric.max, 0)} · moy ${formatNumber(c.numeric.avg, 0)}</span>`;
+                        }
+                        const barWidth = Math.max(4, c.taux_remplissage || 0);
+                        return `<div class="stats-tech-champ-row">
+                            <span class="stats-tech-champ-label">${c.label}</span>
+                            <div class="stats-breakdown-bar-wrap"><div class="stats-breakdown-bar" style="width:${barWidth}%"></div></div>
+                            <span class="stats-breakdown-count">${c.rempli}/${t.total_poi} <small>(${formatNumber(c.taux_remplissage, 0)} %)</small></span>
+                            ${numericHtml}
+                        </div>`;
+                    }).join('');
+                    return `<details class="stats-tech-type-block" ${types.length <= 3 ? 'open' : ''}>
+                        <summary>
+                            <strong>${escapeHtml(t.type_nom)}</strong>
+                            <span class="stats-tech-type-meta">${t.total_poi} POI · complétude ${formatNumber(t.taux_completude_globale, 0)} % · remplissage ${formatNumber(t.taux_remplissage_moyen, 0)} %</span>
+                        </summary>
+                        <div class="stats-tech-champs-list">${champsRows || '<p class="field-help">Aucun champ.</p>'}</div>
+                    </details>`;
+                }).join('');
+            }
+        }
+
+        function mapValidationLabels(obj) {
+            return Object.entries(obj || {}).map(([k, v]) => [VALIDATION_LABELS[k] || k, v]);
+        }
+
+        function objToEntries(obj, limit) {
+            return Object.entries(obj || {})
+                .map(([label, count]) => ({ label, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, limit || 99);
+        }
+
+        function renderBreakdownBars(title, entries, total) {
+            if (!entries.length || !total) {
+                return `<div class="stats-breakdown-block"><h4 class="stats-breakdown-title">${title}</h4><p class="field-help">Aucune donnée</p></div>`;
+            }
+            const max = Math.max(...entries.map(e => e.count), 1);
+            const rows = entries.map(e => {
+                const pct = total > 0 ? Math.round(e.count / total * 100) : 0;
+                const width = Math.max(4, Math.round(e.count / max * 100));
+                return `<div class="stats-breakdown-row">
+                    <span class="stats-breakdown-label">${e.label}</span>
+                    <div class="stats-breakdown-bar-wrap"><div class="stats-breakdown-bar" style="width:${width}%"></div></div>
+                    <span class="stats-breakdown-count">${e.count} <small>(${pct}&nbsp;%)</small></span>
+                </div>`;
+            }).join('');
+            return `<div class="stats-breakdown-block"><h4 class="stats-breakdown-title">${title}</h4>${rows}</div>`;
+        }
+
+        function renderContribSection(contrib, fiscal) {
+            const el = document.getElementById('contribKpis');
+            const breakdown = document.getElementById('contribBreakdown');
+            if (!el || !contrib) return;
+            const total = contrib.total || 0;
+            const sp = fiscal?.statut_paiement || {};
+            el.innerHTML = [
+                ['Contribuables', total, 'info'],
+                ['À jour', `${sp.a_jour || 0}`, 'success'],
+                ['Non à jour', sp.non_a_jour || 0, sp.non_a_jour ? 'warning' : ''],
+            ].map(([label, value, variant]) =>
+                `<div class="stat-card ${variant || ''}"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`
+            ).join('');
+            if (breakdown) {
+                const typeEntries = objToEntries(contrib.par_type, 12);
+                const valEntries = objToEntries(
+                    Object.fromEntries(mapValidationLabels(contrib.par_validation)),
+                    8,
+                );
+                breakdown.innerHTML =
+                    renderBreakdownBars('Répartition par type d\'activité', typeEntries, total)
+                    + renderBreakdownBars('Par statut validation', valEntries, total);
+            }
+        }
+
+        function renderInfraBreakdown(infra) {
+            const el = document.getElementById('infraBreakdown');
+            if (!el || !infra) return;
+            const total = infra.total || 0;
+            const formeEntries = objToEntries(infra.par_forme, 8);
+            const validationEntries = objToEntries(
+                Object.fromEntries(mapValidationLabels(infra.par_validation)),
+                8,
+            );
+            const typeEntries = objToEntries(infra.par_type, 10);
+            el.innerHTML =
+                renderBreakdownBars('Par forme géométrique', formeEntries, total)
+                + renderBreakdownBars('Par statut validation', validationEntries, total)
+                + renderBreakdownBars('Par type d\'activité', typeEntries, total);
+        }
+
+        function renderReferentielCharts(ref, dataStats) {
+            createChart('chartCategorie', 'doughnut', makePieData([
+                ['Contribuables', ref.par_categorie?.contribuable || 0],
+                ['Infrastructures', ref.par_categorie?.infrastructure || 0],
+            ]), pieOptions());
+
+            createChart('chartSecteur', 'pie', makePieData(topEntries(ref.par_secteur, 10)), pieOptions());
+            createChart('chartForme', 'doughnut', makePieData(topEntries(ref.par_forme, 8)), pieOptions());
+
+            const typeEntries = topEntries(ref.par_type || dataStats.par_type, 15);
+            createChart('chartParType', 'bar', makeBarData(
+                typeEntries.map(e => e[0]),
+                [{ label: 'POI', data: typeEntries.map(e => e[1]) }],
+            ), barOptions(true));
+        }
+
+        function renderGeographieCharts(geo, dataStats) {
+            const arrEntries = topEntries(geo.par_arrondissement || dataStats.par_arrondissement, 12);
+            createChart('chartParArrondissement', 'bar', makeBarData(
+                arrEntries.map(e => e[0]),
+                [{ label: 'POI', data: arrEntries.map(e => e[1]) }],
+            ), barOptions(true));
+
+            const quartEntries = topEntries(geo.par_quartier || dataStats.par_quartier, 12);
+            createChart('chartParQuartier', 'bar', makeBarData(
+                quartEntries.map(e => e[0]),
+                [{ label: 'POI', data: quartEntries.map(e => e[1]) }],
+            ), barOptions(true));
+        }
+
+        function renderFiscalCharts(fiscal) {
+            const sp = fiscal.statut_paiement || {};
+            createChart('chartStatutPaiement', 'doughnut', makePieData([
+                ['À jour', sp.a_jour || 0],
+                ['Non à jour', sp.non_a_jour || 0],
+            ]), pieOptions());
+
+            const evo = fiscal.paiements_par_mois || [];
+            createChart('chartEvolutionPaiements', 'line', {
+                labels: evo.map(e => e.label),
+                datasets: [{
+                    label: 'Encaissements (FCFA)',
+                    data: evo.map(e => e.montant),
+                    borderColor: '#009E60',
+                    backgroundColor: 'rgba(0, 158, 96, 0.12)',
+                    fill: true,
+                    tension: 0.3,
+                }],
+            }, { ...barOptions(), scales: { y: { beginAtZero: true } } });
+
+            const inst = (fiscal.par_institut || []).slice(0, 10);
+            createChart('chartInstituts', 'bar', makeBarData(
+                inst.map(i => i.nom),
+                [
+                    { label: 'Attendu', data: inst.map(i => i.montant_attendu), backgroundColor: '#ffb74d' },
+                    { label: 'Recouvré', data: inst.map(i => i.montant_recouvre), backgroundColor: '#009E60' },
+                ],
+            ), barOptions(true, true));
+
+            const taxes = (fiscal.par_taxe || []).slice(0, 12);
+            createChart('chartTaxes', 'bar', makeBarData(
+                taxes.map(t => t.nom),
+                [
+                    { label: 'Attendu', data: taxes.map(t => t.montant_attendu), backgroundColor: '#ffb74d' },
+                    { label: 'Recouvré', data: taxes.map(t => t.montant_recouvre), backgroundColor: '#009E60' },
+                ],
+            ), barOptions(true, true));
+
+            const fArr = (fiscal.par_arrondissement || []).slice(0, 10);
+            createChart('chartFiscalArr', 'bar', makeBarData(
+                fArr.map(a => a.arrondissement),
+                [
+                    { label: 'À jour', data: fArr.map(a => a.a_jour), backgroundColor: '#009E60' },
+                    { label: 'Non à jour', data: fArr.map(a => a.non_a_jour), backgroundColor: '#c62828' },
+                ],
+            ), barOptions(false, true));
+        }
+
+        function renderInfraAndTechCharts(infra, tech, val) {
+            const infraTypes = topEntries(infra.par_type, 12);
+            createChart('chartInfraType', 'bar', makeBarData(
+                infraTypes.map(e => e[0]),
+                [{ label: 'Infrastructures', data: infraTypes.map(e => e[1]) }],
+            ), barOptions(true));
+
+            const ms = infra.metriques_spatiales || {};
+            createChart('chartInfraSpatial', 'bar', makeBarData(
+                ['Pipelines (m)', 'Parcelles (ha×100)', 'Périmètres (m)', 'Couverture pylônes (ha)'],
+                [{
+                    label: 'Valeur',
+                    data: [
+                        ms.pipelines?.total_length_m || 0,
+                        (ms.parcelles?.total_area_ha || 0) * 100,
+                        ms.perimetres?.total_perimeter_m || 0,
+                        ms.pylons?.union_coverage_area_ha || 0,
+                    ],
+                    backgroundColor: ['#1565c0', '#2e7d32', '#6a1b9a', '#e65100'],
+                }],
+            ), barOptions(false));
+
+            const champsTop = (tech.champs_populaires || []).slice(0, 12);
+            createChart('chartTechChamps', 'bar', makeBarData(
+                champsTop.map(c => c.label || c.code),
+                [{ label: 'Remplissage (%)', data: champsTop.map(c => c.taux_remplissage) }],
+            ), barOptions(true));
+
+            const typesTech = (tech.par_type || []).slice(0, 12);
+            createChart('chartTechTypes', 'bar', makeBarData(
+                typesTech.map(t => t.type_nom),
+                [
+                    { label: 'Complétude (%)', data: typesTech.map(t => t.taux_completude_globale), backgroundColor: '#009E60' },
+                    { label: 'Remplissage moyen (%)', data: typesTech.map(t => t.taux_remplissage_moyen), backgroundColor: '#1565c0' },
+                ],
+            ), barOptions(true, true));
+
+            createChart('chartValidationGlobal', 'pie', makePieData(mapValidationLabels(val.par_statut)), pieOptions());
+            createChart('chartValidationContrib', 'doughnut', makePieData(mapValidationLabels(val.contribuables)), pieOptions());
+            createChart('chartValidationInfra', 'doughnut', makePieData(mapValidationLabels(val.infrastructures)), pieOptions());
+        }
+
+        function renderAllCharts() {
+            if (!dataStats) return;
+            const ref = dataStats.referentiel || {};
+            const geo = dataStats.geographie || {};
+            const fiscal = dataStats.fiscal || {};
+            const infra = dataStats.infrastructures || {};
+            const contrib = dataStats.contribuables || {};
+            const val = dataStats.validation || {};
+            const overview = dataStats.vue_ensemble || {};
+            const tech = dataStats.analyse_technique || {};
+
+            safeRender('KPIs', () => {
+                renderOverviewKpis(overview);
+                renderContribSection(contrib, fiscal);
+                renderInfraKpis(infra);
+                renderInfraSpatialKpis(infra);
+                renderInfraBreakdown(infra);
+            });
+
+            safeRender('graphiques référentiel', () => renderReferentielCharts(ref, dataStats));
+            safeRender('graphiques géographie', () => renderGeographieCharts(geo, dataStats));
+            safeRender('graphiques fiscal', () => renderFiscalCharts(fiscal));
+            safeRender('graphiques infra/tech', () => renderInfraAndTechCharts(infra, tech, val));
+
+            safeRender('carte pylônes', () => renderPylonCoverageMap(infra));
+            safeRender('analyse technique', () => renderTechAnalysisSection(tech));
+
+            updateChartTypeArrondissement();
+            updateChartTypeQuartier();
+        }
+
+        function fillTypeSelects() {
+            const types = Object.keys(dataStats.referentiel?.par_type || dataStats.par_type || {});
+            ['selectType', 'selectTypeQuartier'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">— Sélectionner —</option>';
+                types.sort((a, b) => a.localeCompare(b, 'fr')).forEach(t => {
+                    sel.innerHTML += `<option value="${t}">${t}</option>`;
+                });
+                if (cur && types.includes(cur)) sel.value = cur;
+            });
+        }
+
+        function updateChartTypeArrondissement() {
+            const typeSelect = document.getElementById('selectType')?.value;
+            const parTypeArr = dataStats.geographie?.par_type_arrondissement_quartier
+                || dataStats.par_type_arrondissement_quartier || {};
+            const entries = [];
+            if (typeSelect && parTypeArr[typeSelect]) {
+                for (const [arr, quartiers] of Object.entries(parTypeArr[typeSelect])) {
+                    entries.push([arr, Object.values(quartiers).reduce((a, b) => a + b, 0)]);
+                }
+            }
+            entries.sort((a, b) => b[1] - a[1]);
+            createChart('chartTypeArrondissement', 'pie', makePieData(entries), pieOptions());
+        }
+
+        function updateChartTypeQuartier() {
+            const typeSelect = document.getElementById('selectTypeQuartier')?.value;
+            const parTypeArr = dataStats.geographie?.par_type_arrondissement_quartier
+                || dataStats.par_type_arrondissement_quartier || {};
+            const entries = [];
+            if (typeSelect && parTypeArr[typeSelect]) {
+                for (const [arr, quartiers] of Object.entries(parTypeArr[typeSelect])) {
+                    for (const [quart, count] of Object.entries(quartiers)) {
+                        entries.push([`${quart} (${arr})`, count]);
+                    }
+                }
+            }
+            entries.sort((a, b) => b[1] - a[1]);
+            createChart('chartTypeQuartier', 'pie', makePieData(entries.slice(0, 15)), pieOptions());
+        }
+
+        async function loadStatistiques() {
+            const periodLabel = document.getElementById('statsPeriodLabel');
+            try {
+                const response = await fetch(`/api/statistiques/conseiller?${getPeriodParams()}`);
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(errText || `HTTP ${response.status}`);
+                }
+                dataStats = await response.json();
+                if (dataStats.error) throw new Error(dataStats.error);
+
+                if (periodLabel) {
+                    const paysLabel = dataStats.pays?.pays?.nom;
+                    periodLabel.textContent = paysLabel
+                        ? `Période : ${formatPeriodLabel(dataStats.periode)} — Pays : ${paysLabel}`
+                        : `Données fiscales pour la période : ${formatPeriodLabel(dataStats.periode)}`;
+                }
+
+                fillTypeSelects();
+                renderAllCharts();
+            } catch (error) {
+                console.error('Erreur statistiques:', error);
+                document.getElementById('overviewKpis').innerHTML =
+                    '<div class="stat-card warning"><div class="stat-value">—</div><div class="stat-label">Erreur de chargement</div></div>';
+                if (periodLabel) {
+                    periodLabel.textContent = 'Impossible de charger les statistiques. Actualisez ou contactez l\'administrateur.';
+                    periodLabel.classList.add('stats-period-error');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initPeriodSelects();
+            ['statsMoisDebut', 'statsAnneeDebut', 'statsMoisFin', 'statsAnneeFin'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', loadStatistiques);
+            });
+            const pylonToggle = document.getElementById('statsPylonShowCoverage');
+            if (pylonToggle) {
+                pylonToggle.addEventListener('change', () => {
+                    if (dataStats?.infrastructures) renderPylonCoverageMap(dataStats.infrastructures);
+                });
+            }
+            if (window.GeoTaxCountry) {
+                GeoTaxCountry.onChange(() => {
+                    if (map) {
+                        GeoTaxCountry.centerMap(map);
+                    }
+                    loadStatistiques();
+                });
+            }
+            loadStatistiques();
+        });
+    </script>
+</body>
+</html>

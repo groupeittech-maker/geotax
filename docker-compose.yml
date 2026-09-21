@@ -1,0 +1,123 @@
+name: paiement-fisc
+
+services:
+  db:
+    image: postgis/postgis:17-3.5-alpine
+    container_name: paiement-fisc-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-paiement_fisc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Définir POSTGRES_PASSWORD dans .env}
+      POSTGRES_DB: ${POSTGRES_DB:-paiement_fisc}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paiement_fisc} -d ${POSTGRES_DB:-paiement_fisc}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - paiement-fisc
+
+  redis:
+    image: redis:7-alpine
+    container_name: paiement-fisc-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - paiement-fisc
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paiement-fisc-app
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-paiement_fisc}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-paiement_fisc}
+      REDIS_URL: redis://redis:6379/0
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?Définir SECRET_KEY dans .env}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      GUNICORN_BIND: 0.0.0.0:8000
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-1}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+      RUN_INIT_DB: ${RUN_INIT_DB:-0}
+      SKIP_GEOM_BACKFILL: ${SKIP_GEOM_BACKFILL:-1}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - uploads_data:/app/static/uploads/poi
+      - qrcodes_data:/app/qr_codes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
+    restart: unless-stopped
+    networks:
+      - paiement-fisc
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paiement-fisc-worker
+    entrypoint: ["/app/deploy/docker/entrypoint.sh"]
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "geotax"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-paiement_fisc}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-paiement_fisc}
+      REDIS_URL: redis://redis:6379/0
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?Définir SECRET_KEY dans .env}
+      RQ_QUEUE_NAME: geotax
+    volumes:
+      - uploads_data:/app/static/uploads/poi
+      - qrcodes_data:/app/qr_codes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - paiement-fisc
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: paiement-fisc-nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./static:/var/www/static:ro
+      - uploads_data:/var/www/uploads/poi:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - paiement-fisc
+
+volumes:
+  pgdata:
+  redis_data:
+  uploads_data:
+  qrcodes_data:
+
+networks:
+  paiement-fisc:
+    driver: bridge

@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoTax — Plateforme de gestion fiscale & territoriale</title>
+    <meta name="description" content="GeoTax permet aux collectivités de référencer leurs contribuables sur une carte, d'affecter les taxes, de suivre les paiements et de contrôler le recouvrement sur le terrain.">
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap">
+    <style>
+        :root {
+            --green: #0a5131;
+            --green-dark: #083e26;
+            --green-darker: #062f1d;
+            --green-soft: #d4e8dd;
+            --yellow: #e6b800;
+            --yellow-soft: #faf0c2;
+            --red: #c41e2a;
+            --red-soft: #f9e2e4;
+            --orange: #e67e22;
+            --blue: #2e7fb8;
+            --bg: #eef5f0;
+            --card: #ffffff;
+            --text: #062f1d;
+            --text-2: #4a6b5c;
+            --text-3: #6b8575;
+            --border: rgba(10, 81, 49, 0.16);
+            --radius: 1rem;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: "Instrument Sans", system-ui, -apple-system, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.55;
+        }
+        .wrap { max-width: 1160px; margin: 0 auto; padding: 0 1.5rem; }
+        section { padding: 4.5rem 0; }
+        .kicker {
+            display: inline-block;
+            font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; color: var(--green);
+            background: var(--green-soft); border: 1px solid var(--border);
+            padding: 0.35rem 0.9rem; border-radius: 9999px; margin-bottom: 1.1rem;
+        }
+        h1, h2, h3 { line-height: 1.15; letter-spacing: -0.01em; }
+        h2 { font-size: clamp(1.6rem, 3.2vw, 2.4rem); margin-bottom: 0.9rem; }
+        h3 { font-size: 1.15rem; }
+        .lead { font-size: 1.08rem; color: var(--text-2); max-width: 62ch; }
+        .muted { color: var(--text-2); }
+        .center { text-align: center; }
+        .center .lead { margin-left: auto; margin-right: auto; }
+
+        /* ---------- Nav ---------- */
+        .lp-nav {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(238, 245, 240, 0.92); backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+        }
+        .lp-nav .wrap { display: flex; align-items: center; gap: 1.5rem; height: 64px; }
+        .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1.15rem; color: var(--green-darker); text-decoration: none; }
+        .brand-mark {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: 9px;
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            color: #fff; font-size: 0.8rem; font-weight: 700;
+        }
+        .nav-links { display: flex; gap: 1.25rem; margin-left: auto; }
+        .nav-links a { color: var(--text-2); text-decoration: none; font-size: 0.92rem; font-weight: 500; }
+        .nav-links a:hover { color: var(--green); }
+        .btn {
+            display: inline-block; padding: 0.7rem 1.5rem; border-radius: 0.7rem;
+            font-weight: 600; font-size: 0.95rem; text-decoration: none;
+            border: 1px solid transparent; cursor: pointer; transition: all .2s ease;
+        }
+        .btn-primary { background: var(--green); color: #fff; box-shadow: 0 3px 12px rgba(8,62,38,.25); }
+        .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+        .btn-outline { border-color: var(--green); color: var(--green); background: transparent; }
+        .btn-outline:hover { background: var(--green-soft); }
+        .btn-yellow { background: var(--yellow); color: var(--green-darker); }
+        .btn-yellow:hover { background: #d1a600; transform: translateY(-1px); }
+        .btn-sm { padding: 0.45rem 1rem; font-size: 0.85rem; }
+
+        /* ---------- Hero ---------- */
+        .hero {
+            background:
+                radial-gradient(ellipse at 15% 10%, rgba(10,81,49,.16), transparent 55%),
+                radial-gradient(ellipse at 90% 5%, rgba(230,184,0,.12), transparent 45%),
+                linear-gradient(180deg, #e4ede8, var(--bg));
+            padding: 4.5rem 0 5rem;
+        }
+        .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 3rem; align-items: center; }
+        .hero h1 { font-size: clamp(2.1rem, 4.5vw, 3.3rem); font-weight: 700; }
+        .hero h1 em { font-style: normal; color: var(--green); }
+        .hero .lead { margin: 1.1rem 0 1.6rem; }
+        .hero-cta { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.8rem; }
+        .hero-args { display: grid; gap: 0.7rem; }
+        .hero-arg { display: flex; gap: 0.75rem; align-items: flex-start; }
+        .hero-arg .ico { font-size: 1.3rem; line-height: 1.3; }
+        .hero-arg strong { display: block; }
+        .hero-arg span { color: var(--text-2); font-size: 0.9rem; }
+
+        /* Fake map visual */
+        .mapmock {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: 0 16px 48px rgba(6,47,29,.14); overflow: hidden;
+        }
+        .mapmock-top {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.9rem;
+            border-bottom: 1px solid var(--border); background: var(--green-darker); color: #d4e8dd;
+            font-size: 0.78rem; font-weight: 600;
+        }
+        .mapmock-top .dot { width: 9px; height: 9px; border-radius: 50%; }
+        .mapmock-body { display: grid; grid-template-columns: 1fr 168px; min-height: 300px; }
+        .mapmock-map {
+            position: relative;
+            background:
+                linear-gradient(rgba(10,81,49,.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(10,81,49,.06) 1px, transparent 1px),
+                radial-gradient(ellipse at 60% 40%, #e8f2ec, #dde9e2);
+            background-size: 34px 34px, 34px 34px, cover;
+        }
+        .pin { position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+        .pin.ok { background: var(--green); }
+        .pin.part { background: var(--orange); }
+        .pin.late { background: var(--red); }
+        .pin.infra { background: var(--blue); border-radius: 3px; }
+        .mapmock-side { background: var(--card); border-left: 1px solid var(--border); padding: 0.9rem; display: flex; flex-direction: column; gap: 0.6rem; }
+        .mini-kpi { background: var(--bg); border-radius: 0.6rem; padding: 0.55rem 0.7rem; }
+        .mini-kpi b { display: block; font-size: 1.05rem; color: var(--green-darker); }
+        .mini-kpi span { font-size: 0.72rem; color: var(--text-3); }
+        .legend { display: flex; flex-wrap: wrap; gap: 0.7rem; padding: 0.6rem 0.9rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-2); }
+        .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.3rem; }
+
+        /* ---------- Generic blocks ---------- */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.4rem;
+            box-shadow: 0 2px 8px rgba(6,47,29,.05);
+        }
+        .card .ico { font-size: 1.6rem; }
+        .card h3 { margin: 0.5rem 0 0.35rem; }
+        .card p { color: var(--text-2); font-size: 0.92rem; }
+        .list-check { list-style: none; margin-top: 1rem; }
+        .list-check li { padding: 0.3rem 0 0.3rem 1.6rem; position: relative; color: var(--text-2); }
+        .list-check li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+        .list-cross li::before { content: "✕"; color: var(--red); }
+        .alt { background: #fff; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .dark { background: var(--green-darker); color: #e8f2ec; }
+        .dark h2, .dark h3 { color: #fff; }
+        .dark .lead, .dark .muted { color: #a8c4b2; }
+        .dark .kicker { background: rgba(255,255,255,.08); color: var(--yellow); border-color: rgba(255,255,255,.15); }
+
+        /* POI comparison */
+        .poi-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin-top: 1.8rem; }
+        .poi-col { border-radius: var(--radius); padding: 1.6rem; border: 1px solid var(--border); }
+        .poi-col.contrib { background: linear-gradient(160deg, #fff, var(--green-soft)); }
+        .poi-col.infra { background: linear-gradient(160deg, #fff, #dfeaf5); }
+        .poi-col h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; }
+        .poi-col ul { list-style: none; }
+        .poi-col li { padding: 0.25rem 0; color: var(--text-2); font-size: 0.94rem; }
+        .poi-col .tag { display: inline-block; margin-top: 0.8rem; font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 9999px; }
+        .contrib .tag { background: var(--green); color: #fff; }
+        .infra .tag { background: var(--blue); color: #fff; }
+        .keymsg {
+            margin-top: 1.6rem; text-align: center; font-size: 1.1rem; font-weight: 600; color: var(--green-darker);
+        }
+
+        /* Steps */
+        .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.8rem; margin-top: 1.8rem; }
+        .step { background: var(--card); border: 1px solid var(--border); border-radius: 0.8rem; padding: 1rem 0.8rem; text-align: center; }
+        .step .num {
+            width: 30px; height: 30px; margin: 0 auto 0.5rem; border-radius: 50%;
+            background: var(--green); color: #fff; font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .step h3 { font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .step p { font-size: 0.78rem; color: var(--text-2); }
+        .tracebox {
+            margin-top: 1.4rem; background: var(--yellow-soft); border: 1px solid #e8d68a;
+            border-radius: 0.8rem; padding: 0.9rem 1.2rem; font-weight: 600; color: #6b5a00; text-align: center;
+        }
+
+        /* Code / example card */
+        .poi-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 1.4rem; font-size: 0.92rem; box-shadow: 0 6px 20px rgba(6,47,29,.09);
+        }
+        .poi-card .code { font-weight: 700; color: var(--green); font-size: 1.05rem; }
+        .poi-card dl { margin-top: 0.6rem; }
+        .poi-card dt { color: var(--text-3); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
+        .poi-card dd { margin-bottom: 0.45rem; }
+        .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+        .badge.ok { background: var(--green-soft); color: var(--green); }
+        .badge.part { background: #fde8d4; color: var(--orange); }
+        .badge.late { background: var(--red-soft); color: var(--red); }
+        .badge.blue { background: #dfeaf5; color: var(--blue); }
+        .ussd {
+            display: inline-block; font-family: ui-monospace, monospace; font-size: 1.05rem;
+            background: var(--green-darker); color: var(--yellow); border-radius: 0.6rem;
+            padding: 0.55rem 1.1rem; margin-top: 0.5rem;
+        }
+
+        /* KPI */
+        .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin: 1.8rem 0; }
+        .kpi { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; text-align: center; }
+        .kpi b { display: block; font-size: 1.7rem; color: var(--green-darker); }
+        .kpi span { font-size: 0.8rem; color: var(--text-2); }
+        .dark .kpi { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+        .dark .kpi b { color: var(--yellow); }
+        .dark .kpi span { color: #a8c4b2; }
+
+        /* Workflow */
+        .flow { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 1.6rem 0; }
+        .flow span {
+            background: var(--green); color: #fff; font-weight: 600; font-size: 0.85rem;
+            padding: 0.5rem 1rem; border-radius: 9999px;
+        }
+        .flow i { align-self: center; color: var(--text-3); font-style: normal; }
+        .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1.4rem; }
+        .branch { border-radius: var(--radius); padding: 1.4rem; text-align: center; }
+        .branch.contrib { background: var(--green); color: #fff; }
+        .branch.infra { background: var(--blue); color: #fff; }
+        .branch h3 { color: #fff; margin-bottom: 0.3rem; }
+        .branch p { font-size: 0.9rem; opacity: .9; }
+        .branch-merge {
+            margin-top: 1.2rem; text-align: center; font-weight: 700; color: var(--green-darker);
+            background: var(--yellow-soft); border-radius: var(--radius); padding: 1rem;
+        }
+
+        /* Before / After */
+        .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; margin-top: 1.6rem; }
+        .ba .card.before { border-top: 4px solid var(--red); }
+        .ba .card.after { border-top: 4px solid var(--green); }
+
+        /* CTA final */
+        .cta-final { text-align: center; padding: 5rem 0; }
+        .cta-final h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); }
+        .cta-final .lead { margin: 1rem auto 2rem; }
+
+        footer {
+            background: var(--green-darker); color: #a8c4b2; padding: 2rem 0;
+            font-size: 0.85rem;
+        }
+        footer .wrap { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        footer a { color: #d4e8dd; text-decoration: none; }
+        footer a:hover { color: var(--yellow); }
+        footer .right { margin-left: auto; display: flex; gap: 1.2rem; }
+
+        @media (max-width: 900px) {
+            .hero-grid, .grid-2, .poi-cols, .ba, .branches { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr 1fr; }
+            .steps { grid-template-columns: repeat(3, 1fr); }
+            .kpis { grid-template-columns: repeat(2, 1fr); }
+            .nav-links { display: none; }
+            .mapmock-body { grid-template-columns: 1fr; }
+            .mapmock-side { flex-direction: row; flex-wrap: wrap; border-left: none; border-top: 1px solid var(--border); }
+            .mini-kpi { flex: 1 1 40%; }
+        }
+        @media (max-width: 560px) {
+            .grid-3, .steps { grid-template-columns: 1fr; }
+            .kpis { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== NAV ==================== -->
+<nav class="lp-nav">
+    <div class="wrap">
+        <a class="brand" href="/"><span class="brand-mark">GT</span> GeoTax</a>
+        <div class="nav-links">
+            <a href="#concept">Concept</a>
+            <a href="#collecte">Collecte</a>
+            <a href="#paiement">Paiement</a>
+            <a href="#pilotage">Pilotage</a>
+            <a href="#commercant">Contribuable</a>
+        </div>
+        <a href="/login" class="btn btn-primary btn-sm">Connexion</a>
+    </div>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<header class="hero">
+    <div class="wrap hero-grid">
+        <div>
+            <span class="kicker">Plateforme de gestion fiscale &amp; territoriale</span>
+            <h1>Votre territoire.<br>Vos contribuables.<br><em>Vos recettes.</em></h1>
+            <p class="lead">
+                GeoTax permet aux collectivités et administrations de référencer leurs
+                contribuables sur une carte, d'affecter les taxes, de suivre les paiements
+                et de contrôler le recouvrement directement sur le terrain.
+            </p>
+            <div class="hero-cta">
+                <a href="/login" class="btn btn-primary">Demander une démonstration</a>
+                <a href="/login" class="btn btn-outline">Voir GeoTax en action →</a>
+            </div>
+            <div class="hero-args">
+                <div class="hero-arg"><span class="ico">📍</span><div><strong>Référentiel géographique</strong><span>Chaque contribuable et infrastructure est localisé.</span></div></div>
+                <div class="hero-arg"><span class="ico">💰</span><div><strong>Recouvrement digitalisé</strong><span>Taxes, paiements Mobile Money, USSD et reçus vérifiables.</span></div></div>
+                <div class="hero-arg"><span class="ico">📊</span><div><strong>Pilotage en temps réel</strong><span>Recettes, impayés et couverture fiscale en un coup d'œil.</span></div></div>
+            </div>
+        </div>
+        <div class="mapmock" aria-hidden="true">
+            <div class="mapmock-top">
+                <span class="dot" style="background:var(--red)"></span>
+                <span class="dot" style="background:var(--yellow)"></span>
+                <span class="dot" style="background:var(--green)"></span>
+                &nbsp;Carte fiscale — GeoTax
+            </div>
+            <div class="mapmock-body">
+                <div class="mapmock-map">
+                    <span class="pin ok" style="top:18%;left:22%"></span>
+                    <span class="pin ok" style="top:30%;left:48%"></span>
+                    <span class="pin ok" style="top:55%;left:30%"></span>
+                    <span class="pin ok" style="top:70%;left:60%"></span>
+                    <span class="pin ok" style="top:40%;left:75%"></span>
+                    <span class="pin part" style="top:48%;left:15%"></span>
+                    <span class="pin part" style="top:65%;left:45%"></span>
+                    <span class="pin late" style="top:25%;left:62%"></span>
+                    <span class="pin late" style="top:78%;left:25%"></span>
+                    <span class="pin infra" style="top:12%;left:80%"></span>
+                    <span class="pin infra" style="top:58%;left:82%"></span>
+                    <span class="pin infra" style="top:82%;left:75%"></span>
+                </div>
+                <div class="mapmock-side">
+                    <div class="mini-kpi"><b>12 458</b><span>Contribuables recensés</span></div>
+                    <div class="mini-kpi"><b>8 920</b><span>À jour</span></div>
+                    <div class="mini-kpi"><b>2 314</b><span>Impayés</span></div>
+                    <div class="mini-kpi"><b>125 M</b><span>FCFA collectés</span></div>
+                    <div class="mini-kpi"><b>3 842</b><span>Infrastructures</span></div>
+                </div>
+            </div>
+            <div class="legend">
+                <span><i style="background:var(--green)"></i>À jour</span>
+                <span><i style="background:var(--orange)"></i>Partiel</span>
+                <span><i style="background:var(--red)"></i>Impayé</span>
+                <span><i style="background:var(--blue);border-radius:2px"></i>Infrastructure</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ==================== PROBLÈME ==================== -->
+<section id="probleme">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto">
+            <span class="kicker">Le constat</span>
+            <h2>Connaissez-vous réellement votre potentiel fiscal&nbsp;?</h2>
+            <p class="lead">Dans de nombreuses collectivités, les données sont dispersées :</p>
+        </div>
+        <div class="grid-3" style="margin-top:2rem">
+            <div class="card"><span class="ico">📄</span><h3>Données éclatées</h3><p>Registres papier, fichiers Excel, données fiscales séparées des données géographiques.</p></div>
+            <div class="card"><span class="ico">❓</span><h3>Contribuables introuvables</h3><p>Des contribuables difficiles à localiser et des paiements impossibles à contrôler efficacement.</p></div>
+            <div class="card"><span class="ico">🕳️</span><h3>Aucune vision consolidée</h3><p>Pas de vue d'ensemble du recouvrement ; les agents vérifient chaque situation manuellement.</p></div>
+        </div>
+        <p class="keymsg">
+            GeoTax transforme cette réalité&nbsp;: un territoire → un référentiel → des contribuables
+            identifiés → des taxes affectées → des paiements tracés → des données exploitables.
+        </p>
+    </div>
+</section>
+
+<!-- ==================== CONCEPT POI ==================== -->
+<section id="concept" class="alt">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto">
+            <span class="kicker">Le concept central</span>
+            <h2>Un seul référentiel géographique pour tout votre territoire</h2>
+            <p class="lead">GeoTax transforme les éléments du territoire en <strong>POI</strong> — Points of Interest géoréférencés — répartis en deux catégories.</p>
+        </div>
+        <div class="poi-cols">
+            <div class="poi-col contrib">
+                <h3>🏪 Contribuable</h3>
+                <ul>
+                    <li>Commerce, boutique, activité professionnelle</li>
+                    <li>Marché, établissement fiscalisé</li>
+                    <li>Identifiant unique + QR fiscal</li>
+                    <li>Taxes affectées selon l'activité</li>
+                    <li>Paiements suivis et contrôlés</li>
+                </ul>
+                <span class="tag">Paie des taxes</span>
+            </div>
+            <div class="poi-col infra">
+                <h3>🏗️ Infrastructure</h3>
+                <ul>
+                    <li>Pylône, pipeline, parcelle, périmètre</li>
+                    <li>Équipements et patrimoine géoréférencés</li>
+                    <li>Géométries : points, lignes, surfaces</li>
+                    <li>Données techniques personnalisées</li>
+                    <li>Cartographie et statistiques territoriales</li>
+                </ul>
+                <span class="tag">Référentiel territorial</span>
+            </div>
+        </div>
+        <p class="keymsg">
+            Les contribuables alimentent le recouvrement.<br>
+            Les infrastructures enrichissent la connaissance du territoire.
+        </p>
+    </div>
+</section>
+
+<!-- ==================== RÉFÉRENCER ==================== -->
+<section id="referencier">
+    <div class="wrap grid-2">
+        <div>
+            <span class="kicker">Référencer</span>
+            <h2>Commencez par savoir ce qui existe sur votre territoire</h2>
+            <p class="lead">GeoTax permet de constituer progressivement un référentiel géographique structuré&nbsp;:</p>
+            <p style="margin:0.8rem 0;font-weight:600;color:var(--green)">Pays → Département → Commune → Quartier/Village → Marché</p>
+            <ul class="list-check">
+                <li>Identifiant unique et catégorie</li>
+                <li>Propriétaire, téléphone, adresse</li>
+                <li>Position GPS, géométrie et photo</li>
+                <li>Informations personnalisées par type d'activité</li>
+            </ul>
+        </div>
+        <div class="poi-card">
+            <span class="code">POI-001245</span> <span class="badge ok">À jour</span>
+            <dl>
+                <dt>Type</dt><dd>Commerce — Boutique X</dd>
+                <dt>Propriétaire</dt><dd>Jean Dupont</dd>
+                <dt>Téléphone</dt><dd>06 XX XX XX</dd>
+                <dt>Localisation</dt><dd>Quartier Tié-Tié</dd>
+                <dt>Taxe</dt><dd>Taxe communale</dd>
+            </dl>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== COLLECTE TERRAIN ==================== -->
+<section id="collecte" class="alt">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto">
+            <span class="kicker">Collecte terrain</span>
+            <h2>Vos agents recensent directement sur le terrain</h2>
+        </div>
+        <div class="steps">
+            <div class="step"><div class="num">1</div><h3>Localiser</h3><p>Position GPS du POI</p></div>
+            <div class="step"><div class="num">2</div><h3>Identifier</h3><p>Informations du contribuable</p></div>
+            <div class="step"><div class="num">3</div><h3>Photographier</h3><p>Preuve visuelle</p></div>
+            <div class="step"><div class="num">4</div><h3>Géoréférencer</h3><p>Position réelle associée</p></div>
+            <div class="step"><div class="num">5</div><h3>Soumettre</h3><p>Fiche envoyée pour validation</p></div>
+            <div class="step"><div class="num">6</div><h3>Valider</h3><p>Acceptation ou rejet motivé</p></div>
+        </div>
+        <div class="tracebox">Chaque collecte est tracée&nbsp;: qui a collecté, quoi, où et quand.</div>
+    </div>
+</section>
+
+<!-- ==================== FISCALISER + PAIEMENT ==================== -->
+<section id="paiement">
+    <div class="wrap grid-2">
+        <div>
+            <span class="kicker">Fiscaliser</span>
+            <h2>Transformez votre référentiel en potentiel fiscal</h2>
+            <p class="lead">Une fois les contribuables recensés, GeoTax permet d'affecter les taxes correspondant à leur activité.</p>
+            <ul class="list-check">
+                <li>Montant et périodicité paramétrables (mensuel, trimestriel, annuel, ponctuel)</li>
+                <li>Institution collectrice associée à chaque taxe</li>
+                <li>Montant personnalisé possible par contribuable</li>
+            </ul>
+            <p class="keymsg" style="text-align:left">Ne cherchez plus vos contribuables. Ils sont dans votre référentiel.</p>
+        </div>
+        <div>
+            <span class="kicker">Encaisser</span>
+            <h2>Facilitez le paiement des taxes</h2>
+            <ul class="list-check">
+                <li>📱 <strong>USSD</strong> — paiement depuis n'importe quel téléphone</li>
+                <li>💳 <strong>Mobile Money</strong> — opérateurs intégrés</li>
+                <li>🏢 <strong>Guichet</strong> — enregistrement des paiements physiques</li>
+                <li>🔐 <strong>Traçabilité</strong> — numéro de transaction, statut, reçu vérifiable</li>
+            </ul>
+            <div class="ussd">*123*IDBOUTIQUE*MONTANT#</div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== QR + CONTRÔLE ==================== -->
+<section class="dark">
+    <div class="wrap grid-2">
+        <div>
+            <span class="kicker">QR Code &amp; contrôle</span>
+            <h2>Contrôlez la situation fiscale en quelques secondes</h2>
+            <p class="lead">Chaque contribuable dispose d'un QR code unique. Le contrôleur le scanne devant le commerce et GeoTax affiche immédiatement la situation.</p>
+            <p style="margin-top:0.8rem;color:#a8c4b2">Identifier → Consulter → Contrôler → Payer</p>
+        </div>
+        <div class="poi-card" style="color:var(--text)">
+            <span class="code">POI-000245</span>
+            <dl>
+                <dt>Commerce</dt><dd>Boutique Chez Marie</dd>
+                <dt>Taxe</dt><dd>Taxe communale</dd>
+                <dt>Statut</dt>
+                <dd>
+                    <span class="badge ok">🟢 À jour</span>&nbsp;
+                    <span class="badge part">🟠 Partiel</span>&nbsp;
+                    <span class="badge late">🔴 Impayé</span>
+                </dd>
+                <dt>Dernier paiement</dt><dd>15/09/2026</dd>
+            </dl>
+        </div>
+    </div>
+    <div class="wrap"><p class="keymsg" style="color:var(--yellow)">Plus besoin de registres ni de justificatifs multiples.</p></div>
+</section>
+
+<!-- ==================== ESPACE CONTRIBUABLE ==================== -->
+<section id="commercant">
+    <div class="wrap grid-2">
+        <div>
+            <span class="kicker">Espace contribuable</span>
+            <h2>Donnez au contribuable accès à sa situation fiscale</h2>
+            <p class="lead">Depuis son espace personnel, le commerçant consulte et paie en toute autonomie.</p>
+            <p class="keymsg" style="text-align:left">Une relation fiscale plus simple, plus transparente et plus traçable.</p>
+        </div>
+        <div>
+            <ul class="list-check">
+                <li>Consulter ses taxes et les montants dus</li>
+                <li>Consulter l'historique de ses paiements</li>
+                <li>Effectuer un paiement en ligne</li>
+                <li>Récupérer ses justificatifs et reçus</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== PILOTAGE ==================== -->
+<section id="pilotage" class="alt">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto">
+            <span class="kicker">Pilotage</span>
+            <h2>De la collecte terrain à la décision</h2>
+            <p class="lead">Le responsable dispose d'une vision consolidée et en temps réel de l'activité fiscale.</p>
+        </div>
+        <div class="kpis">
+            <div class="kpi"><b>12 458</b><span>Contribuables recensés</span></div>
+            <div class="kpi"><b>8 920</b><span>Contribuables à jour</span></div>
+            <div class="kpi"><b>2 314</b><span>Impayés</span></div>
+            <div class="kpi"><b>125 M</b><span>FCFA collectés</span></div>
+            <div class="kpi"><b>3 842</b><span>Infrastructures référencées</span></div>
+        </div>
+        <div class="grid-3">
+            <div class="card"><span class="ico">🗺️</span><h3>Carte fiscale</h3><p>Contribuables à jour, partiels, impayés et infrastructures sur une même carte, filtrable par commune, quartier, activité ou statut.</p></div>
+            <div class="card"><span class="ico">📈</span><h3>Statistiques territoriales</h3><p>Recettes par période, par taxe, par institution ; zones à fort taux d'impayés ; performances des agents ; couverture du recensement.</p></div>
+            <div class="card"><span class="ico">📤</span><h3>Exports</h3><p>Balances par institut, répartition des recettes, listes d'impayés et exports Excel pour vos rapports.</p></div>
+        </div>
+        <p class="keymsg">Votre fiscalité devient visible sur la carte.</p>
+    </div>
+</section>
+
+<!-- ==================== WORKFLOW ==================== -->
+<section class="dark">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto">
+            <span class="kicker">Le cycle complet</span>
+            <h2>GeoTax accompagne tout le cycle fiscal</h2>
+        </div>
+        <div class="flow">
+            <span>Recenser</span><i>→</i><span>Géolocaliser</span><i>→</i><span>Valider</span><i>→</i>
+            <span>Fiscaliser</span><i>→</i><span>Notifier</span><i>→</i><span>Payer</span><i>→</i>
+            <span>Contrôler</span><i>→</i><span>Analyser</span>
+        </div>
+        <div class="branches">
+            <div class="branch contrib">
+                <h3>🏪 Contribuable</h3>
+                <p>Taxes → Paiements → Recouvrement</p>
+            </div>
+            <div class="branch infra">
+                <h3>🏗️ Infrastructure</h3>
+                <p>Géoréférencement → Référentiel territorial</p>
+            </div>
+        </div>
+        <div class="branch-merge">↓ Pilotage territorial ↓</div>
+    </div>
+</section>
+
+<!-- ==================== POUR QUI + SÉCURITÉ ==================== -->
+<section>
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto 2rem">
+            <span class="kicker">Pour qui&nbsp;?</span>
+            <h2>Une plateforme conçue pour les collectivités</h2>
+        </div>
+        <div class="grid-3">
+            <div class="card"><span class="ico">🏛️</span><h3>Mairies</h3><p>Gestion des taxes communales et suivi du recouvrement.</p></div>
+            <div class="card"><span class="ico">💼</span><h3>Services fiscaux</h3><p>Référencement et suivi des contribuables.</p></div>
+            <div class="card"><span class="ico">👮</span><h3>Services de contrôle</h3><p>Vérification rapide sur le terrain via QR code.</p></div>
+            <div class="card"><span class="ico">🗺️</span><h3>Services techniques</h3><p>Gestion des infrastructures et du patrimoine géoréférencé.</p></div>
+            <div class="card"><span class="ico">📊</span><h3>Décideurs</h3><p>Tableaux de bord et statistiques territoriales.</p></div>
+            <div class="card"><span class="ico">🔐</span><h3>Sécurité &amp; traçabilité</h3><p>Rôles et permissions, journal des collectes, workflow de validation, reçus vérifiables.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== AVANT / APRÈS ==================== -->
+<section class="alt">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto">
+            <span class="kicker">La différence</span>
+            <h2>Avant / Après GeoTax</h2>
+        </div>
+        <div class="ba">
+            <div class="card before">
+                <h3 style="color:var(--red);margin-bottom:0.6rem">Avant</h3>
+                <ul class="list-check list-cross">
+                    <li>Données dispersées, registres inexploitables</li>
+                    <li>Contribuables mal localisés</li>
+                    <li>Contrôle manuel sur le terrain</li>
+                    <li>Paiements difficiles à consolider</li>
+                    <li>Peu de visibilité sur les impayés</li>
+                    <li>Données géographiques sous-exploitées</li>
+                </ul>
+            </div>
+            <div class="card after">
+                <h3 style="color:var(--green);margin-bottom:0.6rem">Avec GeoTax</h3>
+                <ul class="list-check">
+                    <li>Référentiel géographique unique</li>
+                    <li>Contribuables identifiés et localisés</li>
+                    <li>Taxes affectées, paiements digitalisés</li>
+                    <li>Contrôle QR en quelques secondes</li>
+                    <li>Tableau de bord et carte fiscale</li>
+                    <li>Données territoriales exploitables</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== POSITIONNEMENT + CTA ==================== -->
+<section class="cta-final">
+    <div class="wrap">
+        <span class="kicker">GeoTax</span>
+        <h2>Votre territoire, numérisé.</h2>
+        <p class="lead">
+            GeoTax n'est pas seulement un outil de recouvrement — c'est le référentiel
+            numérique de votre territoire. Il connecte territoire, contribuables,
+            fiscalité, paiements, contrôle et données.
+        </p>
+        <p class="lead" style="margin-bottom:2rem">
+            Passez d'une fiscalité déclarative à une fiscalité géoréférencée.
+        </p>
+        <a href="/login" class="btn btn-primary" style="font-size:1.05rem;padding:0.9rem 2.2rem">Demander une démonstration</a>
+        &nbsp;
+        <a href="/login" class="btn btn-yellow" style="font-size:1.05rem;padding:0.9rem 2.2rem">Accéder à la démonstration →</a>
+    </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer>
+    <div class="wrap">
+        <a class="brand" href="/" style="color:#fff"><span class="brand-mark">GT</span> GeoTax</a>
+        <span>Référencer → Fiscaliser → Recouvrer</span>
+        <div class="right">
+            <a href="/login">Connexion équipe</a>
+            <a href="/commercant">Espace contribuable</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

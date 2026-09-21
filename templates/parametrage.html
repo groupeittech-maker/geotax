@@ -4,16 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paramétrage Géographique</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% include '_head.html' %}
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🌍 Paramétrage Géographique</h1>
-            {% include '_nav.html' %}
+        <header class="app-header">
+            {% include '_header_top.html' %}
         </header>
 
         <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Administration</p>
+                <h1 class="page-title">Paramétrage</h1>
+                <p class="page-subtitle">Configuration géographique et référentiels</p>
+            </div>
             <!-- Onglets -->
             <div class="tabs">
                 <button class="tab-btn active" onclick="showTab('pays', this)">🌍 Pays</button>
@@ -21,10 +25,15 @@
                 <button class="tab-btn" onclick="showTab('communes', this)">🏘️ Communes</button>
                 <button class="tab-btn" onclick="showTab('quartiers', this)">🏠 Quartiers/Villages</button>
                 <button class="tab-btn" onclick="showTab('marches', this)">🏪 Marchés</button>
-                <button class="tab-btn" onclick="showTab('types-commerce', this)">🏪 Types de Commerce</button>
+                <button class="tab-btn" onclick="showTab('secteurs-activite', this)">📂 Secteurs d'activité</button>
+                <button class="tab-btn" onclick="showTab('types-commerce', this)">🏷️ Types d’activité (POI)</button>
+                <button class="tab-btn" onclick="showTab('natures-poi', this)" title="Legacy — préférez les champs sur le type">📋 Catégories admin (legacy)</button>
                 <button class="tab-btn" onclick="showTab('instituts', this)">🏛️ Instituts</button>
                 <button class="tab-btn" onclick="showTab('taxes', this)">💰 Taxes</button>
                 <button class="tab-btn" onclick="showTab('repartition', this)">📊 Répartition</button>
+                {% if current_user_role in ['admin', 'conseiller_municipal'] %}
+                <a href="{{ url_for('users_page') }}" class="tab-btn tab-btn-link">👥 Utilisateurs</a>
+                {% endif %}
             </div>
 
             <!-- Section Pays -->
@@ -203,13 +212,36 @@
                 </div>
             </div>
 
+                <!-- Section Secteurs d'activité -->
+                <div id="tab-secteurs-activite" class="tab-content">
+                    <h2>Secteurs d'activité</h2>
+                    <p class="tab-intro">Regroupement des types POI (modèle GéoRéf). Ex. : Commerce, Restauration, Services.</p>
+                    <button onclick="showAddForm('secteurs-activite')" class="btn btn-primary">➕ Ajouter un secteur</button>
+                    <div id="form-secteurs-activite" class="add-form" style="display: none;">
+                        <h3>Nouveau secteur</h3>
+                        <form onsubmit="addSecteurActivite(event)">
+                            <div class="form-group"><label>Code *</label><input type="text" id="secteur-code" required placeholder="COMMERCE"></div>
+                            <div class="form-group"><label>Nom *</label><input type="text" id="secteur-nom" required placeholder="Commerce"></div>
+                            <div class="form-group"><label>Icône</label><input type="text" id="secteur-icon" placeholder="🏪"></div>
+                            <div class="form-group"><label>Couleur</label><input type="color" id="secteur-color" value="#0d9668"></div>
+                            <div class="form-group"><label>Ordre</label><input type="number" id="secteur-ordre" value="0"></div>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <button type="button" onclick="hideForm('secteurs-activite')" class="btn btn-secondary">Annuler</button>
+                        </form>
+                    </div>
+                    <div class="table-container" style="margin-top: 20px;">
+                        <table><thead><tr><th>Code</th><th>Nom</th><th>Types</th><th>Couleur</th><th>Actions</th></tr></thead>
+                        <tbody id="tbody-secteurs-activite"><tr><td colspan="5" class="loading">Chargement…</td></tr></tbody></table>
+                    </div>
+                </div>
+
                 <!-- Section Types de Commerce -->
                 <div id="tab-types-commerce" class="tab-content">
-                    <h2>Gestion des Types de Commerce</h2>
-                    <button onclick="showAddForm('types-commerce')" class="btn btn-primary">➕ Ajouter un Type de Commerce</button>
+                    <h2>Types d’activité des POI</h2>
+                    <button onclick="showAddForm('types-commerce')" class="btn btn-primary">➕ Ajouter un type</button>
 
                     <div id="form-types-commerce" class="add-form" style="display: none;">
-                        <h3>Nouveau Type de Commerce</h3>
+                        <h3>Nouveau type d’activité</h3>
                         <form onsubmit="addTypeCommerce(event)">
                             <div class="form-group">
                                 <label>Code *:</label>
@@ -223,6 +255,44 @@
                                 <label>Description:</label>
                                 <textarea id="type-commerce-description" rows="3" placeholder="Description du type de commerce"></textarea>
                             </div>
+                            <div class="form-group">
+                                <label>Secteur d'activité :</label>
+                                <select id="type-commerce-secteur-id"><option value="">— Aucun —</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Icône :</label>
+                                <input type="text" id="type-commerce-icon" placeholder="🍽️">
+                            </div>
+                            <div class="form-group map-style-config">
+                                <label>Style carte (couleur, traits, hachures)</label>
+                                <div id="type-commerce-palettes" class="map-palette-picker"></div>
+                                <div class="form-grid form-grid-3">
+                                    <div class="form-group">
+                                        <label for="type-commerce-color">Couleur :</label>
+                                        <input type="color" id="type-commerce-color" value="#0d9668">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="type-commerce-line-style">Trait :</label>
+                                        <select id="type-commerce-line-style"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="type-commerce-fill-pattern">Remplissage :</label>
+                                        <select id="type-commerce-fill-pattern"></select>
+                                    </div>
+                                </div>
+                                <div id="type-commerce-style-preview" class="map-style-preview" aria-hidden="true"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Champs techniques du type :</label>
+                                <div id="type-commerce-champs-rows"></div>
+                                <button type="button" class="btn btn-secondary btn-small" onclick="addTypeCommerceChampRow()">➕ Ajouter un champ</button>
+                            </div>
+                            <details class="field-help" style="margin-bottom:12px;">
+                                <summary>Legacy : catégorie administrative</summary>
+                                <select id="type-commerce-nature-id">
+                                    <option value="">— Déduction automatique —</option>
+                                </select>
+                            </details>
                             <button type="submit" class="btn btn-primary">Enregistrer</button>
                             <button type="button" onclick="hideForm('types-commerce')" class="btn btn-secondary">Annuler</button>
                         </form>
@@ -234,12 +304,75 @@
                                 <tr>
                                     <th>Code</th>
                                     <th>Nom</th>
+                                    <th>Secteur</th>
+                                    <th>Champs</th>
+                                    <th>Style carte</th>
                                     <th>Description</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-types-commerce">
-                                <tr><td colspan="4" class="loading">Chargement...</td></tr>
+                                <tr><td colspan="7" class="loading">Chargement...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section Natures POI -->
+                <div id="tab-natures-poi" class="tab-content">
+                    <h2>Catégories administratives</h2>
+                    <p class="tab-intro">Définissent les champs du formulaire POI (onglet « Information administrative »). Elles sont appliquées automatiquement selon le type d'activité — configurez-les ici, pas sur chaque POI.</p>
+                    <button onclick="showAddForm('natures-poi')" class="btn btn-primary">➕ Ajouter une nature</button>
+
+                    <div id="form-natures-poi" class="add-form" style="display: none;">
+                        <h3 id="nature-poi-form-title">Nouvelle nature POI</h3>
+                        <form onsubmit="saveNaturePoi(event)">
+                            <input type="hidden" id="nature-poi-id">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Code * :</label>
+                                    <input type="text" id="nature-poi-code" required placeholder="pharmacie">
+                                </div>
+                                <div class="form-group">
+                                    <label>Nom * :</label>
+                                    <input type="text" id="nature-poi-nom" required placeholder="Pharmacie">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordre :</label>
+                                    <input type="number" id="nature-poi-ordre" value="10" min="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Description :</label>
+                                <textarea id="nature-poi-description" rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Mots-clés (inférence depuis le type d'activité, séparés par des virgules) :</label>
+                                <input type="text" id="nature-poi-mots-cles" placeholder="pharmacie, pharma, officine">
+                            </div>
+                            <h4>Champs administratifs</h4>
+                            <div id="nature-poi-champs-rows"></div>
+                            <button type="button" class="btn btn-secondary" onclick="addNaturePoiChampRow()">➕ Ajouter un champ</button>
+                            <div style="margin-top: 16px;">
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                <button type="button" onclick="hideForm('natures-poi')" class="btn btn-secondary">Annuler</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-container" style="margin-top: 20px;">
+                        <table id="table-natures-poi">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Nom</th>
+                                    <th>Champs</th>
+                                    <th>Ordre</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-natures-poi">
+                                <tr><td colspan="5" class="loading">Chargement...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -436,6 +569,7 @@
         </main>
     </div>
 
+    <script src="{{ url_for('static', filename='map-styles.js') }}"></script>
     <script>
         // Gestion des onglets
         function showTab(tabName, eventElement) {
@@ -478,12 +612,279 @@
                 loadInstitutsForSelect('taxe-institut-id');
             } else if (type === 'marches') {
                 loadQuartiersVillagesForSelect('marche-quartier-id');
+            } else if (type === 'types-commerce') {
+                loadSecteursForSelect('type-commerce-secteur-id');
+                loadNaturesForSelect('type-commerce-nature-id');
+                resetTypeCommerceChampRows();
+                initTypeCommerceMapStylePickers();
+            } else if (type === 'secteurs-activite') {
+                /* rien */
+            } else if (type === 'natures-poi') {
+                resetNaturePoiForm();
             }
         }
 
         function hideForm(type) {
             document.getElementById(`form-${type}`).style.display = 'none';
-            document.getElementById(`form-${type}`).querySelector('form').reset();
+            const form = document.getElementById(`form-${type}`).querySelector('form');
+            if (form) form.reset();
+            if (type === 'natures-poi') resetNaturePoiForm();
+            if (type === 'types-commerce') {
+                delete document.getElementById('form-types-commerce').dataset.editingId;
+                document.getElementById('form-types-commerce').querySelector('h3').textContent = 'Nouveau type d’activité';
+                document.getElementById('form-types-commerce').querySelector('form').onsubmit = addTypeCommerce;
+            }
+        }
+
+        async function loadNaturesForSelect(selectId, selectedId = null) {
+            const response = await fetch('/api/natures-poi/all');
+            const natures = await response.json();
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '<option value="">— Déduction automatique par mots-clés —</option>';
+            natures.filter(n => n.active).forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n.id;
+                opt.textContent = `${n.nom} (${n.code})`;
+                select.appendChild(opt);
+            });
+            if (selectedId) select.value = selectedId;
+        }
+
+        const CHAMP_POI_TYPE_OPTIONS = [
+            { value: 'str', label: 'Texte' },
+            { value: 'int', label: 'Nombre entier' },
+            { value: 'float', label: 'Décimal' },
+            { value: 'textarea', label: 'Zone de texte' },
+            { value: 'checkbox', label: 'Case à cocher' },
+            { value: 'select', label: 'Liste déroulante' },
+            { value: 'radio', label: 'Boutons radio' },
+            { value: 'date', label: 'Date' },
+            { value: 'time', label: 'Heure' },
+            { value: 'email', label: 'E-mail' },
+            { value: 'tel', label: 'Téléphone' },
+            { value: 'url', label: 'URL / Lien' },
+        ];
+
+        function renderChampTypeOptions(selected) {
+            return CHAMP_POI_TYPE_OPTIONS.map(t =>
+                `<option value="${t.value}" ${selected === t.value ? 'selected' : ''}>${t.label}</option>`
+            ).join('');
+        }
+
+        function getChampPlaceholderLabel(type) {
+            if (type === 'select' || type === 'radio') {
+                return 'Options (séparées par des virgules)';
+            }
+            if (type === 'checkbox') {
+                return 'Indication (optionnelle)';
+            }
+            return 'Placeholder / aide';
+        }
+
+        function updateChampRowMeta(row) {
+            const type = row.querySelector('.champ-type')?.value || 'str';
+            const label = row.querySelector('.champ-placeholder-label');
+            const input = row.querySelector('.champ-placeholder');
+            if (label) label.textContent = getChampPlaceholderLabel(type);
+            if (input) {
+                if (type === 'select' || type === 'radio') {
+                    input.placeholder = 'Ex. Oui, Non, Partiel';
+                } else if (type === 'checkbox') {
+                    input.placeholder = 'Ex. Cochez si agrément obtenu';
+                } else {
+                    input.placeholder = '';
+                }
+            }
+        }
+
+        function resetNaturePoiForm() {
+            document.getElementById('nature-poi-id').value = '';
+            document.getElementById('nature-poi-form-title').textContent = 'Nouvelle nature POI';
+            document.getElementById('nature-poi-code').disabled = false;
+            document.getElementById('nature-poi-champs-rows').innerHTML = '';
+            addNaturePoiChampRow();
+        }
+
+        function addNaturePoiChampRow(champ = {}) {
+            const container = document.getElementById('nature-poi-champs-rows');
+            const row = document.createElement('div');
+            row.className = 'form-grid nature-champ-row';
+            row.style.marginBottom = '10px';
+            const type = champ.type_champ || 'str';
+            row.innerHTML = `
+                <input type="hidden" class="champ-id" value="${champ.id || ''}">
+                <div class="form-group"><label>Code champ</label><input type="text" class="champ-code" value="${champ.code || ''}" placeholder="nb_employes" required></div>
+                <div class="form-group"><label>Libellé</label><input type="text" class="champ-libelle" value="${champ.libelle || ''}" placeholder="Nombre d'employés" required></div>
+                <div class="form-group"><label>Type</label>
+                    <select class="champ-type">${renderChampTypeOptions(type)}</select>
+                </div>
+                <div class="form-group"><label class="champ-placeholder-label">${getChampPlaceholderLabel(type)}</label><input type="text" class="champ-placeholder" value="${champ.placeholder || ''}"></div>
+                <div class="form-group"><label><input type="checkbox" class="champ-pleine" ${champ.pleine_largeur ? 'checked' : ''}> Pleine largeur</label></div>
+                <div class="form-group"><button type="button" class="btn-small" style="background:#f44336" onclick="this.closest('.nature-champ-row').remove()">🗑️</button></div>
+            `;
+            container.appendChild(row);
+            row.querySelector('.champ-type').addEventListener('change', () => updateChampRowMeta(row));
+            updateChampRowMeta(row);
+        }
+
+        function collectNaturePoiChampsFromForm() {
+            return Array.from(document.querySelectorAll('#nature-poi-champs-rows .nature-champ-row')).map((row, idx) => ({
+                id: row.querySelector('.champ-id').value ? parseInt(row.querySelector('.champ-id').value, 10) : null,
+                code: row.querySelector('.champ-code').value.trim(),
+                libelle: row.querySelector('.champ-libelle').value.trim(),
+                type_champ: row.querySelector('.champ-type').value,
+                placeholder: row.querySelector('.champ-placeholder').value.trim() || null,
+                pleine_largeur: row.querySelector('.champ-pleine').checked,
+                ordre: idx,
+            })).filter(c => c.code && c.libelle);
+        }
+
+        async function loadNaturesPoi() {
+            try {
+                const response = await fetch('/api/natures-poi/all');
+                const natures = await response.json();
+                renderPaginatedTable({
+                    key: 'natures-poi',
+                    tbodyId: 'tbody-natures-poi',
+                    items: natures,
+                    colspan: 5,
+                    emptyMessage: 'Aucune nature POI enregistrée',
+                    renderRow: (n) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${n.code}</strong></td>
+                            <td>${n.nom}</td>
+                            <td>${(n.champs || []).length} champ(s)</td>
+                            <td>${n.ordre}</td>
+                            <td>
+                                <button onclick="editNaturePoi(${n.id})" class="btn-small">✏️</button>
+                                ${n.code !== 'autre' ? `<button onclick="deleteItem('natures-poi', ${n.id})" class="btn-small" style="background: #f44336;">🗑️</button>` : ''}
+                            </td>
+                        `;
+                        return row;
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        async function saveNaturePoi(event) {
+            event.preventDefault();
+            const id = document.getElementById('nature-poi-id').value;
+            const data = {
+                code: document.getElementById('nature-poi-code').value.trim().toLowerCase(),
+                nom: document.getElementById('nature-poi-nom').value.trim(),
+                description: document.getElementById('nature-poi-description').value.trim(),
+                ordre: parseInt(document.getElementById('nature-poi-ordre').value || '0', 10),
+                mots_cles: document.getElementById('nature-poi-mots-cles').value.split(',').map(s => s.trim()).filter(Boolean),
+                champs: collectNaturePoiChampsFromForm(),
+            };
+            const url = id ? `/api/natures-poi/${id}` : '/api/natures-poi';
+            const method = id ? 'PUT' : 'POST';
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data),
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Nature POI enregistrée.');
+                    hideForm('natures-poi');
+                    loadNaturesPoi();
+                } else {
+                    alert('Erreur: ' + (result.error || 'Enregistrement impossible'));
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function editNaturePoi(id) {
+            const response = await fetch(`/api/natures-poi/${id}`);
+            const nature = await response.json();
+            document.getElementById('nature-poi-id').value = nature.id;
+            document.getElementById('nature-poi-code').value = nature.code;
+            document.getElementById('nature-poi-code').disabled = nature.code === 'autre';
+            document.getElementById('nature-poi-nom').value = nature.nom;
+            document.getElementById('nature-poi-description').value = nature.description || '';
+            document.getElementById('nature-poi-ordre').value = nature.ordre || 0;
+            document.getElementById('nature-poi-mots-cles').value = (nature.mots_cles || []).join(', ');
+            document.getElementById('nature-poi-form-title').textContent = 'Modifier la nature POI';
+            document.getElementById('nature-poi-champs-rows').innerHTML = '';
+            (nature.champs || []).forEach(ch => addNaturePoiChampRow(ch));
+            if (!(nature.champs || []).length) addNaturePoiChampRow();
+            showAddForm('natures-poi');
+        }
+
+        const PARAM_ROWS_PER_PAGE = 8;
+        const paramPageState = {};
+
+        function ensurePagerForTbody(tbodyId) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return null;
+            const table = tbody.closest('table');
+            const container = table ? table.closest('.table-container') : null;
+            if (!container) return null;
+            let pager = container.nextElementSibling;
+            if (!pager || !pager.classList.contains('pagination-controls') || pager.dataset.forTbody !== tbodyId) {
+                pager = document.createElement('div');
+                pager.className = 'pagination-controls';
+                pager.dataset.forTbody = tbodyId;
+                container.insertAdjacentElement('afterend', pager);
+            }
+            return pager;
+        }
+
+        function renderParamPagination(container, currentPage, totalPages, onChange) {
+            if (!container) return;
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+            const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+            container.innerHTML = `
+                <button type="button" class="btn-small" data-page="prev" ${prevDisabled}>← Précédent</button>
+                <span class="pagination-label">Page ${currentPage} / ${totalPages}</span>
+                <button type="button" class="btn-small" data-page="next" ${nextDisabled}>Suivant →</button>
+            `;
+            container.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
+                if (currentPage > 1) onChange(currentPage - 1);
+            });
+            container.querySelector('[data-page="next"]')?.addEventListener('click', () => {
+                if (currentPage < totalPages) onChange(currentPage + 1);
+            });
+        }
+
+        function renderPaginatedTable({ key, tbodyId, items, colspan, emptyMessage, renderRow }) {
+            const tbody = document.getElementById(tbodyId);
+            const pager = ensurePagerForTbody(tbodyId);
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (!Array.isArray(items) || items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${colspan}" class="no-data">${emptyMessage}</td></tr>`;
+                if (pager) pager.innerHTML = '';
+                paramPageState[key] = 1;
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(items.length / PARAM_ROWS_PER_PAGE));
+            let currentPage = paramPageState[key] || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            paramPageState[key] = currentPage;
+
+            const start = (currentPage - 1) * PARAM_ROWS_PER_PAGE;
+            const pageItems = items.slice(start, start + PARAM_ROWS_PER_PAGE);
+            pageItems.forEach(item => tbody.appendChild(renderRow(item)));
+
+            renderParamPagination(pager, currentPage, totalPages, (nextPage) => {
+                paramPageState[key] = nextPage;
+                renderPaginatedTable({ key, tbodyId, items, colspan, emptyMessage, renderRow });
+            });
         }
 
         // Charger les données
@@ -503,8 +904,14 @@
                 } else if (type === 'marches') {
                     await loadMarches();
                     await loadQuartiersVillagesForSelect('marche-quartier-id');
+                } else if (type === 'secteurs-activite') {
+                    await loadSecteursActivite();
                 } else if (type === 'types-commerce') {
                     await loadTypesCommerce();
+                    await loadSecteursForSelect('type-commerce-secteur-id');
+                    await loadNaturesForSelect('type-commerce-nature-id');
+                } else if (type === 'natures-poi') {
+                    await loadNaturesPoi();
                 } else if (type === 'instituts') {
                     await loadInstituts();
                 } else if (type === 'taxes') {
@@ -588,15 +995,13 @@
         async function loadPays() {
             const response = await fetch('/api/pays');
             const pays = await response.json();
-            const tbody = document.getElementById('tbody-pays');
-            tbody.innerHTML = '';
-            
-            if (pays.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucun pays enregistré</td></tr>';
-                return;
-            }
-            
-            pays.forEach(p => {
+            renderPaginatedTable({
+                key: 'pays',
+                tbodyId: 'tbody-pays',
+                items: pays,
+                colspan: 4,
+                emptyMessage: 'Aucun pays enregistré',
+                renderRow: (p) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${p.code}</td>
@@ -606,7 +1011,8 @@
                         <button onclick="deleteItem('pays', ${p.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
                     </td>
                 `;
-                tbody.appendChild(row);
+                    return row;
+                }
             });
         }
 
@@ -642,15 +1048,13 @@
         async function loadDepartements() {
             const response = await fetch('/api/departements');
             const departements = await response.json();
-            const tbody = document.getElementById('tbody-departements');
-            tbody.innerHTML = '';
-            
-            if (departements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucun département enregistré</td></tr>';
-                return;
-            }
-            
-            departements.forEach(d => {
+            renderPaginatedTable({
+                key: 'departements',
+                tbodyId: 'tbody-departements',
+                items: departements,
+                colspan: 4,
+                emptyMessage: 'Aucun département enregistré',
+                renderRow: (d) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${d.pays_nom}</td>
@@ -660,7 +1064,8 @@
                         <button onclick="deleteItem('departements', ${d.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
                     </td>
                 `;
-                tbody.appendChild(row);
+                    return row;
+                }
             });
         }
 
@@ -696,15 +1101,13 @@
         async function loadCommunes() {
             const response = await fetch('/api/communes');
             const communes = await response.json();
-            const tbody = document.getElementById('tbody-communes');
-            tbody.innerHTML = '';
-            
-            if (communes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucune commune enregistrée</td></tr>';
-                return;
-            }
-            
-            communes.forEach(c => {
+            renderPaginatedTable({
+                key: 'communes',
+                tbodyId: 'tbody-communes',
+                items: communes,
+                colspan: 4,
+                emptyMessage: 'Aucune commune enregistrée',
+                renderRow: (c) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${c.departement_nom}</td>
@@ -714,7 +1117,8 @@
                         <button onclick="deleteItem('communes', ${c.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
                     </td>
                 `;
-                tbody.appendChild(row);
+                    return row;
+                }
             });
         }
 
@@ -750,15 +1154,13 @@
         async function loadQuartiersVillages() {
             const response = await fetch('/api/quartiers-villages');
             const quartiers = await response.json();
-            const tbody = document.getElementById('tbody-quartiers');
-            tbody.innerHTML = '';
-            
-            if (quartiers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="no-data">Aucun quartier/village enregistré</td></tr>';
-                return;
-            }
-            
-            quartiers.forEach(q => {
+            renderPaginatedTable({
+                key: 'quartiers',
+                tbodyId: 'tbody-quartiers',
+                items: quartiers,
+                colspan: 5,
+                emptyMessage: 'Aucun quartier/village enregistré',
+                renderRow: (q) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${q.commune_nom}</td>
@@ -769,7 +1171,8 @@
                         <button onclick="deleteItem('quartiers-villages', ${q.id})" class="btn-small btn-warning">🗑️ Supprimer</button>
                     </td>
                 `;
-                tbody.appendChild(row);
+                    return row;
+                }
             });
         }
 
@@ -812,6 +1215,8 @@
             if (type === 'taxes') endpoint = 'taxes';
             if (type === 'instituts') endpoint = 'instituts';
             if (type === 'marches') endpoint = 'marches';
+            if (type === 'natures-poi') endpoint = 'natures-poi';
+            if (type === 'secteurs-activite') endpoint = 'secteurs-activite';
             try {
                 const response = await fetch(`/api/${endpoint}/${id}`, {
                     method: 'DELETE'
@@ -821,7 +1226,8 @@
                     alert('Élément supprimé avec succès!');
                     loadData(type);
                 } else {
-                    alert('Erreur lors de la suppression');
+                    const err = await response.json().catch(() => ({}));
+                    alert('Erreur: ' + (err.error || 'Suppression impossible'));
                 }
             } catch (error) {
                 alert('Erreur: ' + error.message);
@@ -833,15 +1239,13 @@
             try {
                 const response = await fetch('/api/instituts');
                 const instituts = await response.json();
-                const tbody = document.getElementById('tbody-instituts');
-                tbody.innerHTML = '';
-                
-                if (instituts.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Aucun institut enregistré</td></tr>';
-                    return;
-                }
-                
-                instituts.forEach(inst => {
+                renderPaginatedTable({
+                    key: 'instituts',
+                    tbodyId: 'tbody-instituts',
+                    items: instituts,
+                    colspan: 5,
+                    emptyMessage: 'Aucun institut enregistré',
+                    renderRow: (inst) => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td><strong>${inst.code}</strong></td>
@@ -853,7 +1257,8 @@
                             <button onclick="deleteItem('instituts', ${inst.id})" class="btn-small" style="background: #f44336;">🗑️</button>
                         </td>
                     `;
-                    tbody.appendChild(row);
+                        return row;
+                    }
                 });
             } catch (error) {
                 console.error('Erreur:', error);
@@ -924,15 +1329,13 @@
             try {
                 const response = await fetch('/api/taxes');
                 const taxes = await response.json();
-                const tbody = document.getElementById('tbody-taxes');
-                tbody.innerHTML = '';
-                
-                if (taxes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Aucune taxe enregistrée</td></tr>';
-                    return;
-                }
-                
-                taxes.forEach(t => {
+                renderPaginatedTable({
+                    key: 'taxes',
+                    tbodyId: 'tbody-taxes',
+                    items: taxes,
+                    colspan: 6,
+                    emptyMessage: 'Aucune taxe enregistrée',
+                    renderRow: (t) => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${t.institut_nom || '-'}</td>
@@ -945,7 +1348,8 @@
                             <button onclick="deleteItem('taxes', ${t.id})" class="btn-small" style="background: #f44336;">🗑️</button>
                         </td>
                     `;
-                    tbody.appendChild(row);
+                        return row;
+                    }
                 });
             } catch (error) {
                 console.error('Erreur:', error);
@@ -1003,31 +1407,196 @@
             }
         }
 
-        // Charger les marchés
+        // ——— Secteurs d'activité ———
+        async function loadSecteursForSelect(selectId, selectedId = '') {
+            const response = await fetch('/api/secteurs-activite');
+            const secteurs = await response.json();
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '<option value="">— Aucun —</option>';
+            secteurs.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.icon || ''} ${s.nom}`.trim();
+                select.appendChild(opt);
+            });
+            if (selectedId) select.value = selectedId;
+        }
+
+        async function loadSecteursActivite() {
+            const response = await fetch('/api/secteurs-activite?include_types=false&all=true');
+            const secteurs = await response.json();
+            const tbody = document.getElementById('tbody-secteurs-activite');
+            if (!secteurs.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">Aucun secteur</td></tr>';
+                return;
+            }
+            tbody.innerHTML = secteurs.map(s => `
+                <tr>
+                    <td><strong>${s.code}</strong></td>
+                    <td>${s.icon || ''} ${s.nom}</td>
+                    <td>${s.types_count || 0}</td>
+                    <td><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${s.color || '#0d9668'}"></span></td>
+                    <td><button class="btn-small" onclick="deleteItem('secteurs-activite', ${s.id})">🗑️</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function addSecteurActivite(event) {
+            event.preventDefault();
+            const data = {
+                code: document.getElementById('secteur-code').value.trim().toUpperCase(),
+                nom: document.getElementById('secteur-nom').value.trim(),
+                icon: document.getElementById('secteur-icon').value.trim(),
+                color: document.getElementById('secteur-color').value,
+                ordre: parseInt(document.getElementById('secteur-ordre').value, 10) || 0,
+            };
+            const res = await fetch('/api/secteurs-activite', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (!res.ok) { alert(result.error || 'Erreur'); return; }
+            hideForm('secteurs-activite');
+            loadSecteursActivite();
+        }
+
+        const CHAMP_TYPE_OPTIONS = ['str','int','float','textarea','checkbox','select','radio','date','time','email','tel','url'];
+
+        function resetTypeCommerceChampRows() {
+            const container = document.getElementById('type-commerce-champs-rows');
+            if (!container) return;
+            container.innerHTML = '';
+            addTypeCommerceChampRow();
+        }
+
+        function addTypeCommerceChampRow(ch = {}) {
+            const container = document.getElementById('type-commerce-champs-rows');
+            if (!container) return;
+            const row = document.createElement('div');
+            row.className = 'type-champ-row';
+            row.dataset.champId = ch.id || '';
+            row.innerHTML = `
+                <input type="text" placeholder="code" value="${ch.code || ''}" class="champ-code">
+                <input type="text" placeholder="Libellé" value="${ch.libelle || ''}" class="champ-libelle">
+                <select class="champ-type">${CHAMP_TYPE_OPTIONS.map(t => `<option value="${t}" ${ch.type_champ === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+                <input type="text" placeholder="Options / placeholder" value="${ch.placeholder || ''}" class="champ-placeholder">
+                <button type="button" class="btn-small" onclick="this.closest('.type-champ-row').remove()">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function collectTypeCommerceChamps() {
+            return [...document.querySelectorAll('#type-commerce-champs-rows .type-champ-row')].map(row => ({
+                id: row.dataset.champId ? parseInt(row.dataset.champId, 10) : undefined,
+                code: row.querySelector('.champ-code')?.value.trim(),
+                libelle: row.querySelector('.champ-libelle')?.value.trim(),
+                type_champ: row.querySelector('.champ-type')?.value || 'str',
+                placeholder: row.querySelector('.champ-placeholder')?.value.trim() || null,
+            })).filter(c => c.code && c.libelle);
+        }
+
+        function formatTypeChampsCount(t) {
+            const own = t.champs_count || 0;
+            const effective = t.champs_effectifs_count != null ? t.champs_effectifs_count : own;
+            if (effective > own) {
+                return `${own} <span class="field-help" title="Champs hérités de la nature POI">(${effective} effectifs)</span>`;
+            }
+            return String(own);
+        }
+
+        function initTypeCommerceMapStylePickers() {
+            if (!window.GeoTaxMapStyles) return;
+            const pal = document.getElementById('type-commerce-palettes');
+            if (pal && !pal.dataset.initialized) {
+                pal.dataset.initialized = '1';
+                pal.innerHTML = Object.entries(GeoTaxMapStyles.PALETTES).map(([, p]) => `
+                    <div class="palette-group">
+                        <span class="palette-label">${p.label}</span>
+                        <div class="palette-swatches">
+                            ${p.colors.map(c => `<button type="button" class="palette-swatch" style="background:${c}" data-color="${c}" title="${c}"></button>`).join('')}
+                        </div>
+                    </div>`).join('');
+                pal.querySelectorAll('.palette-swatch').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.getElementById('type-commerce-color').value = btn.dataset.color;
+                        updateTypeCommerceStylePreview();
+                    });
+                });
+            }
+            const lineSel = document.getElementById('type-commerce-line-style');
+            if (lineSel && !lineSel.options.length) {
+                lineSel.innerHTML = Object.entries(GeoTaxMapStyles.LINE_STYLES)
+                    .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+            }
+            const fillSel = document.getElementById('type-commerce-fill-pattern');
+            if (fillSel && !fillSel.options.length) {
+                fillSel.innerHTML = Object.entries(GeoTaxMapStyles.FILL_PATTERNS)
+                    .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+            }
+            ['type-commerce-color', 'type-commerce-line-style', 'type-commerce-fill-pattern'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.dataset.previewBound) {
+                    el.dataset.previewBound = '1';
+                    el.addEventListener('input', updateTypeCommerceStylePreview);
+                    el.addEventListener('change', updateTypeCommerceStylePreview);
+                }
+            });
+            updateTypeCommerceStylePreview();
+        }
+
+        function updateTypeCommerceStylePreview() {
+            const preview = document.getElementById('type-commerce-style-preview');
+            if (!preview || !window.GeoTaxMapStyles) return;
+            const style = {
+                color: document.getElementById('type-commerce-color')?.value || '#0d9668',
+                lineStyle: document.getElementById('type-commerce-line-style')?.value || 'solid',
+                fillPattern: document.getElementById('type-commerce-fill-pattern')?.value || 'solid',
+            };
+            preview.innerHTML = GeoTaxMapStyles.renderPreviewSvg(style, 220, 72);
+        }
+
+        function getTypeCommerceMapStylePayload() {
+            return {
+                map_line_style: document.getElementById('type-commerce-line-style')?.value || 'solid',
+                map_fill_pattern: document.getElementById('type-commerce-fill-pattern')?.value || 'solid',
+            };
+        }
+
+        function renderTypeStylePreviewCell(t) {
+            if (!window.GeoTaxMapStyles) {
+                return `<span class="map-legend-dot" style="background:${t.color || '#607d8b'}"></span>`;
+            }
+            const style = GeoTaxMapStyles.resolveStyleFromType(t);
+            return GeoTaxMapStyles.renderPreviewSvg(style, 48, 22);
+        }
+
+        // Charger les types de commerce
         async function loadTypesCommerce() {
             try {
-                const response = await fetch('/api/types-commerce');
+                const response = await fetch('/api/types-commerce?all=true');
                 const types = await response.json();
-                const tbody = document.getElementById('tbody-types-commerce');
-                tbody.innerHTML = '';
-
-                if (types.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="no-data">Aucun type de commerce enregistré</td></tr>';
-                    return;
-                }
-
-                types.forEach(t => {
+                renderPaginatedTable({
+                    key: 'types-commerce',
+                    tbodyId: 'tbody-types-commerce',
+                    items: types,
+                    colspan: 7,
+                    emptyMessage: 'Aucun type de commerce enregistré',
+                    renderRow: (t) => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td><strong>${t.code}</strong></td>
-                        <td>${t.nom}</td>
+                        <td>${t.icon || ''} ${t.nom}</td>
+                        <td>${t.secteur ? t.secteur.nom : '—'}</td>
+                        <td>${formatTypeChampsCount(t)}</td>
+                        <td class="map-style-preview-cell">${renderTypeStylePreviewCell(t)}</td>
                         <td>${t.description || '-'}</td>
                         <td>
                             <button onclick="editTypeCommerce(${t.id})" class="btn-small">✏️</button>
                             <button onclick="deleteItem('types-commerce', ${t.id})" class="btn-small" style="background: #f44336;">🗑️</button>
                         </td>
                     `;
-                    tbody.appendChild(row);
+                        return row;
+                    }
                 });
             } catch (error) {
                 console.error('Erreur:', error);
@@ -1048,7 +1617,15 @@
             const data = {
                 code: code,
                 nom: nom,
-                description: document.getElementById('type-commerce-description').value.trim()
+                description: document.getElementById('type-commerce-description').value.trim(),
+                secteur_id: document.getElementById('type-commerce-secteur-id').value
+                    ? parseInt(document.getElementById('type-commerce-secteur-id').value, 10) : null,
+                icon: document.getElementById('type-commerce-icon').value.trim() || null,
+                color: document.getElementById('type-commerce-color').value || null,
+                ...getTypeCommerceMapStylePayload(),
+                champs: collectTypeCommerceChamps(),
+                nature_poi_id: document.getElementById('type-commerce-nature-id').value
+                    ? parseInt(document.getElementById('type-commerce-nature-id').value, 10) : null,
             };
             
             try {
@@ -1077,12 +1654,24 @@
 
         async function editTypeCommerce(id) {
             try {
-                const response = await fetch(`/api/types-commerce/${id}`);
+                const response = await fetch(`/api/types-commerce/${id}?include_champs=true`);
                 const type = await response.json();
                 
                 document.getElementById('type-commerce-code').value = type.code;
                 document.getElementById('type-commerce-nom').value = type.nom;
                 document.getElementById('type-commerce-description').value = type.description || '';
+                document.getElementById('type-commerce-icon').value = type.icon || '';
+                document.getElementById('type-commerce-color').value = type.color || '#0d9668';
+                document.getElementById('type-commerce-line-style').value = type.map_line_style || 'solid';
+                document.getElementById('type-commerce-fill-pattern').value = type.map_fill_pattern || 'solid';
+                initTypeCommerceMapStylePickers();
+                updateTypeCommerceStylePreview();
+                await loadSecteursForSelect('type-commerce-secteur-id', type.secteur_id || '');
+                await loadNaturesForSelect('type-commerce-nature-id', type.nature_poi_id || '');
+                const container = document.getElementById('type-commerce-champs-rows');
+                container.innerHTML = '';
+                (type.champs || []).forEach(ch => addTypeCommerceChampRow(ch));
+                if (!(type.champs || []).length) addTypeCommerceChampRow();
                 
                 document.getElementById('form-types-commerce').dataset.editingId = id;
                 document.getElementById('form-types-commerce').querySelector('h3').textContent = 'Modifier le Type de Commerce';
@@ -1107,7 +1696,15 @@
             const data = {
                 code: code,
                 nom: nom,
-                description: document.getElementById('type-commerce-description').value.trim()
+                description: document.getElementById('type-commerce-description').value.trim(),
+                secteur_id: document.getElementById('type-commerce-secteur-id').value
+                    ? parseInt(document.getElementById('type-commerce-secteur-id').value, 10) : null,
+                icon: document.getElementById('type-commerce-icon').value.trim() || null,
+                color: document.getElementById('type-commerce-color').value || null,
+                ...getTypeCommerceMapStylePayload(),
+                champs: collectTypeCommerceChamps(),
+                nature_poi_id: document.getElementById('type-commerce-nature-id').value
+                    ? parseInt(document.getElementById('type-commerce-nature-id').value, 10) : null,
             };
             
             try {
@@ -1134,15 +1731,13 @@
             try {
                 const response = await fetch('/api/marches');
                 const marches = await response.json();
-                const tbody = document.getElementById('tbody-marches');
-                tbody.innerHTML = '';
-                
-                if (marches.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Aucun marché enregistré</td></tr>';
-                    return;
-                }
-                
-                marches.forEach(m => {
+                renderPaginatedTable({
+                    key: 'marches',
+                    tbodyId: 'tbody-marches',
+                    items: marches,
+                    colspan: 6,
+                    emptyMessage: 'Aucun marché enregistré',
+                    renderRow: (m) => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td><strong>${m.code}</strong></td>
@@ -1155,7 +1750,8 @@
                             <button onclick="deleteItem('marches', ${m.id})" class="btn-small" style="background: #f44336;">🗑️</button>
                         </td>
                     `;
-                    tbody.appendChild(row);
+                        return row;
+                    }
                 });
             } catch (error) {
                 console.error('Erreur:', error);

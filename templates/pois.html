@@ -1,0 +1,2736 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoTax — Points d'intérêt (POI)</title>
+    {% include '_head.html' %}
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            {% include '_header_top.html' %}
+        </header>
+
+        <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Référentiel</p>
+                <h1 class="page-title">Points d'intérêt</h1>
+                <p class="page-subtitle">Gestion et suivi des POI enregistrés</p>
+            </div>
+
+            <div class="tabs poi-page-tabs">
+                <button type="button" class="tab-btn active" id="poiTabListe" onclick="switchPoiView('liste')">📋 Liste des contribuables</button>
+                <button type="button" class="tab-btn" id="poiTabGeo" onclick="switchPoiView('geo')">🗺️ Liste des infrastructures</button>
+                <button type="button" class="tab-btn" id="poiTabTechnique" onclick="switchPoiView('technique')">🔧 Données techniques</button>
+            </div>
+
+            <section id="poiViewListe" class="boutiques-list-section">
+                <div class="section-header">
+                    <h2>Liste des contribuables</h2>
+                    <button type="button" class="btn btn-primary" onclick="PoiWizard.selectCategory('contribuable')">
+                        Ajouter un contribuable
+                    </button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="searchCommerce" placeholder="Rechercher par code, nom, responsable, téléphone, nature, localisation…" 
+                           oninput="filterBoutiques()" class="search-input">
+                    <select id="filterStatutPoi" onchange="filterBoutiques()" class="filter-statut-select" title="Filtrer par statut de paiement">
+                        <option value="">Tous les statuts paiement</option>
+                        <option value="a_jour">✅ À jour</option>
+                        <option value="non_a_jour">❌ Non à jour</option>
+                    </select>
+                    <span id="searchCount" class="search-count"></span>
+                </div>
+                <div class="balances-period-selector pois-period-selector">
+                    <label>Période du</label>
+                    <select id="poisMoisDebut" onchange="loadBoutiques()">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                    <select id="poisAnneeDebut" onchange="loadBoutiques()"></select>
+                    <label>au</label>
+                    <select id="poisMoisFin" onchange="loadBoutiques()">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                    <select id="poisAnneeFin" onchange="loadBoutiques()"></select>
+                </div>
+                <div id="poisStatsPanel" class="poi-stats-panel" hidden>
+                    <div class="poi-stats-header">
+                        <h3 class="poi-stats-title">Synthèse contribuables</h3>
+                        <span id="poisStatsScope" class="poi-stats-scope"></span>
+                    </div>
+                    <div class="stats-grid poi-stats-grid" id="poisStatsGrid"></div>
+                </div>
+                <div class="table-container">
+                    <table id="boutiquesTable">
+                        <thead>
+                            <tr>
+                                <th>Forme</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Type d'activité</th>
+                                <th>Responsable</th>
+                                <th>Téléphone</th>
+                                <th>Localisation</th>
+                                <th>Statut Paiement</th>
+                                <th>Montant à recouvrer</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boutiquesTableBody">
+                            <tr>
+                                <td colspan="10" class="loading">Chargement…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="poisPagination" class="pagination-controls"></div>
+            </section>
+
+            <section id="poiViewGeo" class="boutiques-list-section" hidden>
+                <div class="section-header">
+                    <h2>Liste des infrastructures</h2>
+                    <button type="button" class="btn btn-primary" onclick="PoiWizard.selectCategory('infrastructure')">
+                        Ajouter une infrastructure
+                    </button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="searchGeo" placeholder="Rechercher par code, nom, type, forme, localisation…"
+                           oninput="filterGeoFeatures()" class="search-input">
+                    <select id="filterGeoShape" onchange="filterGeoFeatures()" class="filter-statut-select" title="Filtrer par forme">
+                        <option value="">Toutes les formes</option>
+                        <option value="pylon">🗼 Pylône</option>
+                        <option value="pipeline">🔧 Pipeline</option>
+                        <option value="parcel">📐 Parcelle</option>
+                        <option value="perimeter">⭕ Périmètre</option>
+                    </select>
+                    <select id="filterGeoValidation" onchange="filterGeoFeatures()" class="filter-statut-select" title="Filtrer par statut validation">
+                        <option value="">Tous statuts validation</option>
+                        <option value="valide">✅ Validé</option>
+                        <option value="en_attente">⏳ En attente</option>
+                        <option value="brouillon">📝 Brouillon</option>
+                        <option value="rejete">❌ Rejeté</option>
+                    </select>
+                    <span id="searchGeoCount" class="search-count"></span>
+                </div>
+                <div id="geoStatsPanel" class="poi-stats-panel" hidden>
+                    <div class="poi-stats-header">
+                        <h3 class="poi-stats-title">Synthèse infrastructures</h3>
+                        <span id="geoStatsScope" class="poi-stats-scope"></span>
+                    </div>
+                    <div class="stats-grid poi-stats-grid" id="geoStatsGrid"></div>
+                </div>
+                <p class="field-help geo-stats-hint">
+                    Analyses spatiales (pylônes, couverture) et champs techniques :
+                    <a href="/statistiques#theme-infrastructures">Statistiques → Infrastructures</a>
+                    ·
+                    <a href="/statistiques#theme-analyse-technique">Analyses techniques</a>
+                </p>
+                <div class="table-container">
+                    <table id="geoTable">
+                        <thead>
+                            <tr>
+                                <th>Forme</th>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Type d'activité</th>
+                                <th>Pays</th>
+                                <th>Localisation</th>
+                                <th>Statut validation</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="geoTableBody">
+                            <tr>
+                                <td colspan="8" class="loading">Chargement…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="geoPagination" class="pagination-controls"></div>
+            </section>
+
+            <section id="poiViewTechnique" class="boutiques-list-section" hidden>
+                <div class="section-header">
+                    <h2>Données techniques par type d'activité</h2>
+                </div>
+                <div class="tech-data-toolbar">
+                    <div class="tech-data-filters">
+                        <div class="form-group">
+                            <label for="techFilterType">Type d'activité *</label>
+                            <select id="techFilterType" onchange="loadDonneesTechniques(1)">
+                                <option value="">— Choisir un type —</option>
+                            </select>
+                        </div>
+                        <div class="form-group tech-search-group">
+                            <label for="techSearchInput">Recherche</label>
+                            <input type="search" id="techSearchInput" placeholder="Code, nom, responsable, valeurs techniques…"
+                                   oninput="debouncedTechSearch()">
+                        </div>
+                        <div class="form-group">
+                            <label for="techPerPage">Lignes / page</label>
+                            <select id="techPerPage" onchange="loadDonneesTechniques(1)">
+                                <option value="10">10</option>
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                    <details class="tech-columns-picker">
+                        <summary>Colonnes à afficher</summary>
+                        <div id="techColumnsPicker" class="tech-columns-grid">
+                            <p class="field-help">Sélectionnez d'abord un type d'activité.</p>
+                        </div>
+                        <div class="tech-columns-actions">
+                            <button type="button" class="btn btn-secondary btn-small" onclick="resetTechColumns()">Réinitialiser colonnes</button>
+                        </div>
+                    </details>
+                </div>
+                <p id="techDataSummary" class="tech-data-summary"></p>
+                <div id="techStatsPanel" class="poi-stats-panel" hidden>
+                    <div class="poi-stats-header">
+                        <h3 class="poi-stats-title">Synthèse données techniques</h3>
+                        <span id="techStatsScope" class="poi-stats-scope"></span>
+                    </div>
+                    <div class="stats-grid poi-stats-grid" id="techStatsGrid"></div>
+                    <div id="techStatsChamps" class="poi-stats-champs"></div>
+                </div>
+                <div class="table-container">
+                    <table class="tech-data-table" id="techDataTable">
+                        <thead id="techDataThead">
+                            <tr><th>Sélectionnez un type d'activité</th></tr>
+                        </thead>
+                        <tbody id="techDataTbody">
+                            <tr><td class="no-data">Choisissez un type d'activité pour afficher le tableau.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="techDataPagination" class="pagination-controls"></div>
+            </section>
+
+            <!-- Modal Ajouter / modifier POI -->
+            <div id="commerceModal" class="modal modal-commerce">
+                <div class="modal-overlay" onclick="closeCommerceModal()"></div>
+                <div class="modal-content modal-commerce-content">
+                    <div class="modal-header">
+                        <h2 id="formTitle">Ajouter un nouveau POI</h2>
+                        <button type="button" class="modal-close" onclick="closeCommerceModal()" aria-label="Fermer">&times;</button>
+                    </div>
+                    <form id="boutiqueForm" class="boutique-form modal-commerce-form" onsubmit="submitPoiForm(event)">
+                    <div class="modal-commerce-body">
+                    <input type="hidden" id="poiShape" value="point">
+                    <input type="hidden" id="poiCategorie" value="contribuable">
+                    <input type="hidden" id="poiGeometryJson" value="">
+
+                    <div id="poiShapeSummary" class="poi-shape-summary" hidden>
+                        <span id="poiShapeSummaryLabel">—</span>
+                        <button type="button" class="btn btn-secondary btn-small" onclick="document.getElementById('commerceModal').classList.remove('modal-open'); PoiWizard.openShapePicker();">Changer la forme</button>
+                    </div>
+
+                    <div id="poiFormFields">
+                    <div class="tabs poi-form-tabs poi-form-tabs-compact" role="tablist">
+                        <button type="button" class="tab-btn" data-tab="geoloc" id="tabBtnGeoloc" onclick="switchPoiTab('geoloc')">📍 Géolocalisation</button>
+                        <button type="button" class="tab-btn active" data-tab="administratif" id="tabBtnAdmin" onclick="switchPoiTab('administratif')">📋 Administratif</button>
+                        <button type="button" class="tab-btn" data-tab="technique" id="tabBtnTechnique" onclick="switchPoiTab('technique')">🔧 Technique</button>
+                    </div>
+
+                    <!-- Onglet 1 : Géolocalisation -->
+                    <div id="tab-geoloc" class="tab-content poi-tab-panel">
+                        <p id="poiGeoIntro" class="tab-intro tab-intro-compact">Localisation géographique du point d'intérêt.</p>
+                        <div id="poiGeoShapeFields" class="form-grid poi-modal-grid poi-shape-fields">
+                            <div class="form-group" id="poiPylonFields" hidden>
+                                <label for="poiRadius">Rayon d'influence (m) *</label>
+                                <input type="number" id="poiRadius" min="1" step="1" value="500">
+                            </div>
+                            <div class="form-group" id="poiPipelineFields" hidden>
+                                <label for="poiDiameter">Diamètre (mm) *</label>
+                                <input type="number" id="poiDiameter" min="1" step="1" value="400">
+                            </div>
+                        </div>
+                        <div id="poiPaysField" class="form-grid poi-modal-grid poi-geo-grid">
+                            <div class="form-group">
+                                <label for="pays_id">Pays *</label>
+                                <select id="pays_id" required onchange="onPaysChange()">
+                                    <option value="">Sélectionner…</option>
+                                </select>
+                                <p id="poiPaysHelp" class="field-help" hidden>
+                                    Rattachement administratif du pays (infrastructures géométriques).
+                                </p>
+                            </div>
+                        </div>
+                        <div id="poiGeoPointFields" class="form-grid poi-modal-grid poi-geo-grid">
+                            <div class="form-group">
+                                <label for="departement_id">Département *</label>
+                                <select id="departement_id" required onchange="loadCommunes()">
+                                    <option value="">Sélectionner…</option>
+                                </select>
+                                <p id="deptEmptyHelp" class="field-help" hidden>
+                                    Aucun département pour ce pays — créez-en dans
+                                    <a href="/parametrage">Paramétrage → Départements</a>.
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label for="commune_id">Commune / arrondissement *</label>
+                                <select id="commune_id" required onchange="loadQuartiers()">
+                                    <option value="">Sélectionner…</option>
+                                </select>
+                                <p id="communeEmptyHelp" class="field-help" hidden>
+                                    Aucune commune pour ce département — créez-en dans
+                                    <a href="/parametrage">Paramétrage → Communes</a>.
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label for="quartier_village_id">Quartier / village *</label>
+                                <select id="quartier_village_id" required onchange="loadMarches()">
+                                    <option value="">Sélectionner…</option>
+                                </select>
+                                <p id="quartierEmptyHelp" class="field-help" hidden>
+                                    Aucun quartier/village pour cette commune — créez-en dans
+                                    <a href="/parametrage">Paramétrage → Quartiers</a>.
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label for="adresse">Adresse</label>
+                                <input type="text" id="adresse" placeholder="Rue, numéro…">
+                            </div>
+                            <div class="form-group">
+                                <label for="marche_id">Marché</label>
+                                <select id="marche_id">
+                                    <option value="">Aucun (optionnel)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-grid poi-modal-grid poi-geo-grid">
+                            <div class="form-group poi-coords-group">
+                                <label>Coordonnées GPS</label>
+                                <div class="poi-coords-row">
+                                    <input type="number" id="latitude" step="0.000001" placeholder="Latitude">
+                                    <input type="number" id="longitude" step="0.000001" placeholder="Longitude">
+                                    <button type="button" onclick="getCurrentLocation()" class="btn btn-secondary btn-small">📍 Position</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Onglet 2 : Informations administratives -->
+                    <div id="tab-administratif" class="tab-content poi-tab-panel active">
+                        <p id="poiAdminIntro" class="tab-intro tab-intro-compact">Identité du POI, activité, contact et fiscalité.</p>
+                        <div class="form-grid poi-modal-grid">
+                            <div class="form-group">
+                                <label for="code_unique">Code unique</label>
+                                <input type="text" id="code_unique" placeholder="Auto si vide">
+                            </div>
+                            <div class="form-group">
+                                <label for="nom">Nom du POI *</label>
+                                <input type="text" id="nom" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="type_commerce_id">Type d'activité</label>
+                                <select id="type_commerce_id" onchange="onTypeCommerceChange()">
+                                    <option value="">Sélectionner…</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="proprietaire">Responsable / exploitant</label>
+                                <input type="text" id="proprietaire">
+                            </div>
+                            <div class="form-group">
+                                <label for="telephone">Téléphone</label>
+                                <input type="tel" id="telephone" placeholder="+242 06…">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="poiDescription">Description / observations</label>
+                                <textarea id="poiDescription" rows="2" placeholder="Référence, remarques…"></textarea>
+                            </div>
+                        </div>
+                        <div id="poiTaxesSection" class="poi-modal-section">
+                            <h3 class="poi-modal-section-title">Taxes applicables</h3>
+                            <div id="taxes-container" class="poi-taxes-box">
+                                <div id="taxes-list" class="poi-taxes-list">
+                                    <div class="loading">Chargement…</div>
+                                </div>
+                                <div id="taxes-summary" class="poi-taxes-summary">
+                                    <strong>Total : <span id="total-taxes">0</span> FCFA</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Onglet 3 : Informations techniques -->
+                    <div id="tab-technique" class="tab-content poi-tab-panel">
+                        <p class="tab-intro tab-intro-compact">Champs techniques définis pour le type d'activité sélectionné.</p>
+                        <div id="adminCategoryAuto" class="admin-category-display admin-category-compact" hidden>
+                            <span class="admin-category-label">Type d'activité :</span>
+                            <strong id="adminCategoryName">—</strong>
+                        </div>
+                        <div id="admin-panels-container"></div>
+                        <p id="techniqueEmptyHint" class="tab-intro tab-intro-compact poi-technique-hint">
+                            Sélectionnez un type d'activité dans l'onglet Administratif pour afficher les champs techniques.
+                        </p>
+                        <div class="form-group poi-photo-group" id="poiPhotoSection">
+                            <label for="poiPhotoInput">Photo du POI</label>
+                            <input type="file" id="poiPhotoInput" accept="image/jpeg,image/png,image/webp">
+                            <div id="poiPhotoPreview" class="poi-photo-preview" hidden></div>
+                        </div>
+                    </div>
+                    </div><!-- /poiFormFields -->
+                    </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="closeCommerceModal()">Annuler</button>
+                            <button type="button" class="btn btn-secondary" id="btnSubmitValidation" hidden onclick="submitPoiForValidation()">📤 Soumettre à validation</button>
+                            <button type="button" class="btn btn-secondary" id="btnSaveDraft" hidden onclick="savePoiAsDraft()">📝 Enregistrer en brouillon</button>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">➕ Ajouter le POI</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal identifiants contribuable -->
+            <div id="commercantAccessModal" class="modal">
+                <div class="modal-overlay" onclick="closeCommercantAccessModal()"></div>
+                <div class="modal-content" style="max-width: 520px;">
+                    <div class="modal-header">
+                        <h2>Compte contribuable créé</h2>
+                        <button type="button" class="modal-close" onclick="closeCommercantAccessModal()" aria-label="Fermer">&times;</button>
+                    </div>
+                    <div class="commercant-access-body">
+                        <p class="tab-intro">Remettez ces identifiants au commerçant. Le mot de passe devra être changé à la première connexion.</p>
+                        <div class="commercant-access-field">
+                            <span class="commercant-access-label">Connexion (téléphone ou code POI)</span>
+                            <code id="caIdentifiant">—</code>
+                        </div>
+                        <div class="commercant-access-field">
+                            <span class="commercant-access-label">Code POI</span>
+                            <code id="caCode">—</code>
+                        </div>
+                        <div class="commercant-access-field">
+                            <span class="commercant-access-label">Mot de passe provisoire</span>
+                            <code id="caPassword" class="commercant-access-password">—</code>
+                        </div>
+                        <p class="commercant-access-url">Espace contribuable : <a id="caUrl" href="/commercant/connexion" target="_blank">/commercant/connexion</a></p>
+                        <div class="form-actions" style="margin-top: 1rem;">
+                            <button type="button" class="btn btn-secondary" onclick="copyCommercantAccess()">📋 Copier les identifiants</button>
+                            <button type="button" class="btn btn-primary" onclick="closeCommercantAccessModal()">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Relevé des paiements -->
+            <div id="releveModal" class="modal modal-releve">
+                <div class="modal-overlay" onclick="closeReleveModal()"></div>
+                <div class="modal-content modal-releve-content">
+                    <div class="modal-header modal-releve-header">
+                        <div class="modal-header-inner">
+                            <span class="modal-icon">💰</span>
+                            <div>
+                                <h2 id="releveModalTitle">Relevé des paiements</h2>
+                                <p id="releveModalSubtitle" class="releve-subtitle"></p>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close" onclick="closeReleveModal()" aria-label="Fermer">&times;</button>
+                    </div>
+                    <div class="modal-releve-body">
+                        <div id="releveSummary" class="releve-summary">
+                            <div class="releve-summary-item">
+                                <span class="releve-summary-label">Total attendu</span>
+                                <span id="releveTotalAttendu" class="releve-summary-value">0 FCFA</span>
+                            </div>
+                            <div class="releve-summary-item is-success">
+                                <span class="releve-summary-label">Recouvré</span>
+                                <span id="releveTotalRecouvre" class="releve-summary-value">0 FCFA</span>
+                            </div>
+                            <div class="releve-summary-item is-warning">
+                                <span class="releve-summary-label">À recouvrer</span>
+                                <span id="releveTotalARecouvrer" class="releve-summary-value">0 FCFA</span>
+                            </div>
+                        </div>
+                        <div class="releve-filters">
+                            <button type="button" class="releve-filter-btn active" data-filter="all" onclick="filterReleve('all')">Tous</button>
+                            <button type="button" class="releve-filter-btn" data-filter="recouvre" onclick="filterReleve('recouvre')">✅ Recouvrés</button>
+                            <button type="button" class="releve-filter-btn" data-filter="non_recouvre" onclick="filterReleve('non_recouvre')">❌ Non recouvrés</button>
+                            <button type="button" class="releve-filter-btn" data-filter="en_attente" onclick="filterReleve('en_attente')">⏳ En attente</button>
+                            <button type="button" class="releve-filter-btn" data-filter="partiel" onclick="filterReleve('partiel')">⚠️ Partiels</button>
+                        </div>
+                        <div class="table-container releve-table-wrap">
+                            <table id="releveTable" class="releve-table">
+                                <thead>
+                                    <tr>
+                                        <th>Période</th>
+                                        <th>Taxe</th>
+                                        <th>Institution</th>
+                                        <th>Attendu</th>
+                                        <th>Recouvré</th>
+                                        <th>Restant</th>
+                                        <th>État</th>
+                                        <th>Détails</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="releveTableBody">
+                                    <tr><td colspan="8" class="loading">Chargement…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer modal-releve-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeReleveModal()">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='poi-wizard.js') }}"></script>
+    <script>
+        const CURRENT_USER_ROLE = '{{ current_user_role or "" }}';
+        const IS_AGENT_TERRAIN = CURRENT_USER_ROLE === 'agent_terrain';
+        let saveAsDraftNext = false;
+        let typesCommerceById = {};
+        let currentTypeChampsScope = null;
+
+        const VALIDATION_LABELS = {
+            brouillon: 'Brouillon',
+            en_attente: 'En attente',
+            valide: 'Validé',
+            rejete: 'Rejeté',
+        };
+
+        function adminFieldDomId(scope, ch) {
+            const code = typeof ch === 'string' ? ch : (ch.code || 'field');
+            const id = (typeof ch === 'object' && ch.id) ? ch.id : code;
+            return `admin_${scope}_${id}`;
+        }
+
+        function getSelectedTypeCommerce() {
+            const tcSel = document.getElementById('type_commerce_id');
+            if (!tcSel || !tcSel.value) return null;
+            return typesCommerceById[parseInt(tcSel.value, 10)] || null;
+        }
+
+        function getEffectiveChamps(tc) {
+            if (!tc) return [];
+            return tc.champs_effectifs || tc.champs || [];
+        }
+
+        function getPoiCategorie() {
+            return document.getElementById('poiCategorie')?.value || 'contribuable';
+        }
+
+        function poiHasFiscalTaxes() {
+            return getPoiCategorie() === 'contribuable';
+        }
+
+        function shapeHasFiscalTaxes() {
+            return poiHasFiscalTaxes();
+        }
+
+        function extractGeometryCoords(geometry) {
+            if (!geometry) return null;
+            if (geometry.type === 'Point' && geometry.coordinates) {
+                return { lat: geometry.coordinates[1], lng: geometry.coordinates[0] };
+            }
+            if (geometry.type === 'LineString' && geometry.coordinates && geometry.coordinates.length) {
+                const c = geometry.coordinates[0];
+                return { lat: c[1], lng: c[0] };
+            }
+            if (geometry.type === 'Polygon' && geometry.coordinates && geometry.coordinates[0] && geometry.coordinates[0].length) {
+                const ring = geometry.coordinates[0];
+                let lat = 0;
+                let lng = 0;
+                ring.forEach(c => { lng += c[0]; lat += c[1]; });
+                const n = ring.length;
+                return { lat: lat / n, lng: lng / n };
+            }
+            return PoiWizard.extractPointCoords(geometry);
+        }
+
+        function getTypeChampsScope(typeId) {
+            return `type_${typeId}`;
+        }
+
+        function parseFieldOptions(placeholder) {
+            if (!placeholder) return [];
+            return String(placeholder).split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+        }
+
+        function appendAdminFieldControl(group, scope, ch) {
+            const domId = adminFieldDomId(scope, ch);
+            const type = ch.type_champ || 'str';
+
+            if (type === 'textarea') {
+                const input = document.createElement('textarea');
+                input.rows = ch.code === 'description' ? 3 : 2;
+                input.id = domId;
+                input.dataset.scope = scope;
+                input.dataset.fieldCode = ch.code;
+                input.dataset.fieldType = type;
+                if (ch.placeholder) input.placeholder = ch.placeholder;
+                group.appendChild(input);
+                return;
+            }
+
+            if (type === 'checkbox') {
+                const wrap = document.createElement('label');
+                wrap.className = 'admin-checkbox-field';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.id = domId;
+                input.dataset.scope = scope;
+                input.dataset.fieldCode = ch.code;
+                input.dataset.fieldType = type;
+                wrap.appendChild(input);
+                const hint = document.createElement('span');
+                hint.textContent = ch.placeholder || 'Oui';
+                wrap.appendChild(hint);
+                group.appendChild(wrap);
+                return;
+            }
+
+            if (type === 'select') {
+                const input = document.createElement('select');
+                input.id = domId;
+                input.dataset.scope = scope;
+                input.dataset.fieldCode = ch.code;
+                input.dataset.fieldType = type;
+                const empty = document.createElement('option');
+                empty.value = '';
+                empty.textContent = '— Sélectionner —';
+                input.appendChild(empty);
+                parseFieldOptions(ch.placeholder).forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt;
+                    input.appendChild(option);
+                });
+                group.appendChild(input);
+                return;
+            }
+
+            if (type === 'radio') {
+                const wrap = document.createElement('div');
+                wrap.className = 'admin-radio-group';
+                const options = parseFieldOptions(ch.placeholder);
+                if (!options.length) options.push('Oui', 'Non');
+                options.forEach((opt, i) => {
+                    const lbl = document.createElement('label');
+                    lbl.className = 'admin-radio-option';
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = domId;
+                    input.id = `${domId}_${i}`;
+                    input.value = opt;
+                    input.dataset.scope = scope;
+                    input.dataset.fieldCode = ch.code;
+                    lbl.appendChild(input);
+                    lbl.appendChild(document.createTextNode(' ' + opt));
+                    wrap.appendChild(lbl);
+                });
+                group.appendChild(wrap);
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.id = domId;
+            input.dataset.scope = scope;
+            input.dataset.fieldCode = ch.code;
+            input.dataset.fieldType = type;
+            if (type === 'int') { input.type = 'number'; input.min = '0'; input.step = '1'; }
+            else if (type === 'float') { input.type = 'number'; input.min = '0'; input.step = 'any'; }
+            else if (type === 'date') input.type = 'date';
+            else if (type === 'time') input.type = 'time';
+            else if (type === 'email') input.type = 'email';
+            else if (type === 'tel') input.type = 'tel';
+            else if (type === 'url') input.type = 'url';
+            else input.type = 'text';
+            if (ch.placeholder) input.placeholder = ch.placeholder;
+            group.appendChild(input);
+        }
+
+        function buildTypeChampsPanel(typeId, champs, containerId, scopeOverride) {
+            const container = document.getElementById(containerId || 'admin-panels-container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (containerId === 'admin-panels-container' || !containerId) {
+                currentTypeChampsScope = typeId ? getTypeChampsScope(typeId) : null;
+            }
+            if (!typeId || !champs || !champs.length) return;
+
+            const panel = document.createElement('div');
+            panel.className = 'admin-nature-panel';
+            const grid = document.createElement('div');
+            grid.className = 'form-grid poi-admin-grid';
+            const scope = scopeOverride || getTypeChampsScope(typeId);
+            champs.forEach(ch => {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+                if (ch.pleine_largeur) group.style.gridColumn = '1 / -1';
+                const label = document.createElement('label');
+                const domId = adminFieldDomId(scope, ch);
+                if (ch.type_champ !== 'checkbox') label.setAttribute('for', domId);
+                label.textContent = ch.libelle;
+                group.appendChild(label);
+                appendAdminFieldControl(group, scope, ch);
+                grid.appendChild(group);
+            });
+            panel.appendChild(grid);
+            container.appendChild(panel);
+        }
+
+        function getPoiTypeLabel(b) {
+            if (b.type_commerce && b.type_commerce.nom) return b.type_commerce.nom;
+            return b.nature_poi_label || '—';
+        }
+
+        function validationBadge(code) {
+            const cls = { brouillon: 'badge-neutral', en_attente: 'badge-warning', valide: 'badge-success', rejete: 'badge-danger' }[code] || 'badge-neutral';
+            return `<span class="poi-statut-badge ${cls}">${VALIDATION_LABELS[code] || code || '—'}</span>`;
+        }
+
+        function updateAdminCategoryUI() {
+            const tc = getSelectedTypeCommerce();
+            const autoBlock = document.getElementById('adminCategoryAuto');
+            const nameEl = document.getElementById('adminCategoryName');
+            const hintEl = document.getElementById('techniqueEmptyHint');
+            const panels = document.getElementById('admin-panels-container');
+            const hasType = !!tc;
+            if (autoBlock) autoBlock.hidden = !hasType;
+            if (nameEl) nameEl.textContent = tc ? tc.nom : '—';
+            if (panels) panels.hidden = !hasType;
+            if (hintEl) hintEl.hidden = hasType;
+        }
+
+        function onTypeCommerceChange() {
+            const tc = getSelectedTypeCommerce();
+            buildTypeChampsPanel(tc ? tc.id : null, getEffectiveChamps(tc));
+            updateAdminCategoryUI();
+        }
+
+        function switchPoiTab(name) {
+            document.querySelectorAll('.poi-form-tabs .tab-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === name);
+            });
+            ['geoloc', 'administratif', 'technique'].forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                if (el) el.classList.toggle('active', name === tab);
+            });
+        }
+
+        function clearAdminInputsInContainer(containerId) {
+            const root = document.getElementById(containerId);
+            if (!root) return;
+            root.querySelectorAll('input, textarea, select').forEach(el => {
+                if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+                else el.value = '';
+            });
+        }
+
+        function clearAllAdminInputs() {
+            clearAdminInputsInContainer('admin-panels-container');
+        }
+
+        function setAdminFieldValue(scope, ch, value) {
+            const domId = adminFieldDomId(scope, ch);
+            const type = ch.type_champ || 'str';
+            if (type === 'radio') {
+                document.querySelectorAll(`input[type="radio"][name="${domId}"]`).forEach(r => {
+                    r.checked = String(value) === r.value;
+                });
+                return;
+            }
+            const el = document.getElementById(domId);
+            if (!el) return;
+            if (type === 'checkbox') {
+                el.checked = value === true || value === 'true' || value === 1 || value === '1';
+            } else if (value != null && value !== '') {
+                el.value = value;
+            }
+        }
+
+        function fillAdminFieldsFromType(typeId, data) {
+            clearAdminInputsInContainer('admin-panels-container');
+            const tc = typesCommerceById[typeId];
+            if (!tc) return;
+            const scope = getTypeChampsScope(typeId);
+            getEffectiveChamps(tc).forEach(ch => {
+                if (data && data[ch.code] != null && data[ch.code] !== '') {
+                    setAdminFieldValue(scope, ch, data[ch.code]);
+                }
+            });
+        }
+
+        function collectDonneesAdministrativesForType(tc, scope) {
+            const out = {};
+            if (!tc || !scope) return out;
+            getEffectiveChamps(tc).forEach(ch => {
+                const type = ch.type_champ || 'str';
+                const domId = adminFieldDomId(scope, ch);
+                if (type === 'radio') {
+                    const checked = document.querySelector(`input[type="radio"][name="${domId}"]:checked`);
+                    if (checked) out[ch.code] = checked.value;
+                    return;
+                }
+                const el = document.getElementById(domId);
+                if (!el) return;
+                if (type === 'checkbox') {
+                    if (el.checked) out[ch.code] = true;
+                    return;
+                }
+                const v = (el.value || '').trim();
+                if (v !== '') out[ch.code] = v;
+            });
+            return out;
+        }
+
+        function collectDonneesAdministratives() {
+            const tc = getSelectedTypeCommerce();
+            return collectDonneesAdministrativesForType(tc, tc ? getTypeChampsScope(tc.id) : null);
+        }
+
+        async function uploadPoiPhotoIfNeeded(boutiqueId) {
+            const input = document.getElementById('poiPhotoInput');
+            if (!input || !input.files || !input.files[0] || !boutiqueId) return;
+            const fd = new FormData();
+            fd.append('photo', input.files[0]);
+            await fetch(`/api/boutiques/${boutiqueId}/photo`, { method: 'POST', body: fd });
+        }
+
+        async function submitPoiForValidation() {
+            if (!editingBoutiqueId) return;
+            try {
+                const res = await fetch(`/api/boutiques/${editingBoutiqueId}/submit-validation`, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erreur');
+                alert('POI soumis à validation.');
+                loadBoutiques();
+                closeCommerceModal();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function updateSubmitValidationButton(boutique) {
+            const btnSubmit = document.getElementById('btnSubmitValidation');
+            const btnDraft = document.getElementById('btnSaveDraft');
+            if (!btnSubmit) return;
+            const showSubmit = editingBoutiqueId && boutique
+                && ['brouillon', 'rejete'].includes(boutique.statut_validation);
+            btnSubmit.hidden = !showSubmit;
+            if (btnDraft) {
+                btnDraft.hidden = !(IS_AGENT_TERRAIN && !editingBoutiqueId);
+            }
+        }
+
+        function savePoiAsDraft() {
+            saveAsDraftNext = true;
+            const form = document.getElementById('boutiqueForm');
+            const editingId = form.dataset.editingId;
+            saveUnifiedPoi(!!editingId, editingId || null);
+        }
+
+        // Charger les pays puis les départements
+        async function loadPaysForForm(selectedPaysId) {
+            const select = document.getElementById('pays_id');
+            if (!select) return;
+            try {
+                if (window.GeoTaxCountry) {
+                    await GeoTaxCountry.fillSelect(select, selectedPaysId);
+                } else {
+                    const response = await fetch('/api/pays');
+                    const pays = await response.json();
+                    select.innerHTML = '<option value="">Sélectionner un pays</option>';
+                    pays.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.nom;
+                        select.appendChild(option);
+                    });
+                    if (selectedPaysId) select.value = selectedPaysId;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des pays:', error);
+            }
+        }
+
+        function getSelectedPaysId() {
+            return document.getElementById('pays_id')?.value
+                || window.GeoTaxCountry?.getId?.()
+                || '';
+        }
+
+        function onPaysChange() {
+            loadDepartements();
+            const communeSelect = document.getElementById('commune_id');
+            const quartierSelect = document.getElementById('quartier_village_id');
+            if (communeSelect) communeSelect.innerHTML = '<option value="">Sélectionner une commune</option>';
+            if (quartierSelect) quartierSelect.innerHTML = '<option value="">Sélectionner un quartier/village</option>';
+            const communeHelp = document.getElementById('communeEmptyHelp');
+            const quartierHelp = document.getElementById('quartierEmptyHelp');
+            if (communeHelp) communeHelp.hidden = true;
+            if (quartierHelp) quartierHelp.hidden = true;
+        }
+
+        async function loadDepartements() {
+            const select = document.getElementById('departement_id');
+            const help = document.getElementById('deptEmptyHelp');
+            if (!select) return;
+            const paysId = getSelectedPaysId();
+            if (!paysId) {
+                select.innerHTML = '<option value="">Sélectionner un pays d\'abord</option>';
+                if (help) help.hidden = true;
+                return;
+            }
+            try {
+                const response = await fetch(`/api/departements?pays_id=${encodeURIComponent(paysId)}`, {
+                    credentials: 'include',
+                });
+                const departements = await response.json();
+                if (!response.ok) {
+                    throw new Error(departements.error || 'Erreur API départements');
+                }
+                select.innerHTML = '<option value="">Sélectionner un département</option>';
+                if (!Array.isArray(departements) || departements.length === 0) {
+                    if (help) help.hidden = false;
+                    return;
+                }
+                if (help) help.hidden = true;
+                departements.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d.id;
+                    option.textContent = `${d.nom} (${d.code})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des départements:', error);
+                select.innerHTML = '<option value="">Erreur de chargement</option>';
+            }
+        }
+
+        // Charger les communes selon le département sélectionné
+        async function loadCommunes() {
+            const departementId = document.getElementById('departement_id')?.value;
+            const communeSelect = document.getElementById('commune_id');
+            const quartierSelect = document.getElementById('quartier_village_id');
+            const help = document.getElementById('communeEmptyHelp');
+            if (!communeSelect) return;
+
+            communeSelect.innerHTML = '<option value="">Sélectionner une commune</option>';
+            if (quartierSelect) quartierSelect.innerHTML = '<option value="">Sélectionner un quartier/village</option>';
+            const quartierHelp = document.getElementById('quartierEmptyHelp');
+            if (quartierHelp) quartierHelp.hidden = true;
+
+            if (!departementId) {
+                if (help) help.hidden = true;
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `/api/communes?departement_id=${encodeURIComponent(departementId)}`,
+                    { credentials: 'include' },
+                );
+                const communes = await response.json();
+                if (!response.ok) {
+                    throw new Error(communes.error || 'Erreur API communes');
+                }
+                if (!Array.isArray(communes) || communes.length === 0) {
+                    if (help) help.hidden = false;
+                    return;
+                }
+                if (help) help.hidden = true;
+                communes.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.id;
+                    option.textContent = `${c.nom} (${c.code})`;
+                    communeSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des communes:', error);
+                communeSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            }
+        }
+
+        // Charger les quartiers selon la commune sélectionnée
+        async function loadQuartiers() {
+            const communeId = document.getElementById('commune_id')?.value;
+            const quartierSelect = document.getElementById('quartier_village_id');
+            const marcheSelect = document.getElementById('marche_id');
+            const help = document.getElementById('quartierEmptyHelp');
+            if (!quartierSelect) return;
+
+            quartierSelect.innerHTML = '<option value="">Sélectionner un quartier/village</option>';
+            if (marcheSelect) marcheSelect.innerHTML = '<option value="">Sélectionner un marché (optionnel)</option>';
+
+            if (!communeId) {
+                if (help) help.hidden = true;
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `/api/quartiers-villages?commune_id=${encodeURIComponent(communeId)}`,
+                    { credentials: 'include' },
+                );
+                const quartiers = await response.json();
+                if (!response.ok) {
+                    throw new Error(quartiers.error || 'Erreur API quartiers');
+                }
+                if (!Array.isArray(quartiers) || quartiers.length === 0) {
+                    if (help) help.hidden = false;
+                    return;
+                }
+                if (help) help.hidden = true;
+                quartiers.forEach(q => {
+                    const option = document.createElement('option');
+                    option.value = q.id;
+                    option.textContent = `${q.nom} (${q.type})`;
+                    quartierSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des quartiers:', error);
+                quartierSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            }
+        }
+
+        // Charger les marchés selon le quartier sélectionné
+        async function loadMarches() {
+            const quartierId = document.getElementById('quartier_village_id').value;
+            const marcheSelect = document.getElementById('marche_id');
+            
+            marcheSelect.innerHTML = '<option value="">Sélectionner un marché (optionnel)</option>';
+            
+            if (!quartierId) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/marches?quartier_id=${quartierId}`);
+                const marches = await response.json();
+                
+                if (marches.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Aucun marché disponible pour ce quartier';
+                    option.disabled = true;
+                    marcheSelect.appendChild(option);
+                } else {
+                    marches.forEach(m => {
+                        const option = document.createElement('option');
+                        option.value = m.id;
+                        option.textContent = `${m.nom} (${m.code})`;
+                        marcheSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des marchés:', error);
+            }
+        }
+
+        // Obtenir la position GPS actuelle
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert('La géolocalisation n\'est pas supportée par votre navigateur');
+                return;
+            }
+            
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '⏳ Localisation...';
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+                    document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+                    button.disabled = false;
+                    button.textContent = '📍 Obtenir Position';
+                    alert('Position obtenue avec succès!');
+                },
+                (error) => {
+                    button.disabled = false;
+                    button.textContent = '📍 Obtenir Position';
+                    alert('Erreur lors de la géolocalisation: ' + error.message);
+                }
+            );
+        }
+
+        async function addBoutique(event) {
+            if (event) event.preventDefault();
+            const form = document.getElementById('boutiqueForm');
+            const editingId = form.dataset.editingId;
+            if (!editingId) return;
+            saveUnifiedPoi(true, editingId);
+        }
+
+        function setGeoFormRequired(shapeId, enabled) {
+            const isPoint = shapeId === 'point';
+            const paysEl = document.getElementById('pays_id');
+            if (paysEl) paysEl.required = enabled;
+            ['departement_id', 'commune_id', 'quartier_village_id'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.required = isPoint && enabled;
+            });
+            const nomEl = document.getElementById('nom');
+            if (nomEl) nomEl.required = enabled;
+        }
+
+        function applyPoiShapeUI(shapeId, isEdit) {
+            const shape = PoiWizard.getShape(shapeId) || PoiWizard.getShape('point');
+            const isPoint = shapeId === 'point';
+
+            document.getElementById('poiShape').value = shapeId;
+            document.getElementById('poiShapeSummary').hidden = isEdit;
+            document.getElementById('poiShapeSummaryLabel').textContent =
+                `Forme sélectionnée : ${PoiWizard.formatShapeLabel(shapeId)} — géométrie enregistrée sur la carte`;
+
+            document.getElementById('poiGeoPointFields').hidden = !isPoint;
+            document.getElementById('poiPaysField').hidden = false;
+            const paysHelp = document.getElementById('poiPaysHelp');
+            if (paysHelp) paysHelp.hidden = isPoint;
+            document.getElementById('poiPylonFields').hidden = shapeId !== 'pylon';
+            document.getElementById('poiPipelineFields').hidden = shapeId !== 'pipeline';
+
+            const taxesSection = document.getElementById('poiTaxesSection');
+            if (taxesSection) taxesSection.hidden = !poiHasFiscalTaxes();
+
+            const photoSection = document.getElementById('poiPhotoSection');
+            if (photoSection) photoSection.hidden = !isPoint;
+
+            const geoIntro = document.getElementById('poiGeoIntro');
+            if (geoIntro) {
+                geoIntro.textContent = isPoint
+                    ? 'Localisation géographique du point d\'intérêt.'
+                    : `Géométrie ${shape.label.toLowerCase()} — paramètres et coordonnées de référence.`;
+            }
+
+            const adminIntro = document.getElementById('poiAdminIntro');
+            if (adminIntro) {
+                adminIntro.textContent = poiHasFiscalTaxes()
+                    ? 'Identité du POI, activité, contact et fiscalité.'
+                    : 'Identité du POI, activité et contact.';
+            }
+
+            const cat = getPoiCategorie();
+            const catLabel = PoiWizard.formatCategoryLabel(cat);
+            const shapeLabel = isPoint ? 'point' : shape.label.toLowerCase();
+            document.getElementById('formTitle').textContent = isEdit
+                ? '✏️ Modifier le POI'
+                : `Caractéristiques — ${catLabel} (${shapeLabel})`;
+            document.getElementById('submitBtn').textContent = isEdit ? '💾 Enregistrer' : '➕ Enregistrer le POI';
+
+            const btnVal = document.getElementById('btnSubmitValidation');
+            if (btnVal && !isEdit) btnVal.hidden = true;
+
+            setGeoFormRequired(shapeId, !isEdit);
+        }
+
+        window.openPoiCharacteristicsForm = async function (pending) {
+            if (!pending || pending.step !== 'characteristics' || !pending.geometry) return;
+
+            await loadTaxesForForm();
+
+            const form = document.getElementById('boutiqueForm');
+            delete form.dataset.editingId;
+            editingBoutiqueId = null;
+            form.reset();
+            clearAllAdminInputs();
+            buildTypeChampsPanel(null, []);
+
+            document.getElementById('poiCategorie').value = pending.categorie || 'contribuable';
+            document.getElementById('poiGeometryJson').value = JSON.stringify(pending.geometry);
+            document.getElementById('poiShape').value = pending.shape || 'point';
+            applyPoiShapeUI(pending.shape || 'point', false);
+
+            const coords = extractGeometryCoords(pending.geometry);
+            if (coords) {
+                document.getElementById('latitude').value = coords.lat.toFixed(6);
+                document.getElementById('longitude').value = coords.lng.toFixed(6);
+            }
+
+            switchPoiTab('administratif');
+
+            const globalPaysId = window.GeoTaxCountry?.getId?.();
+            await loadPaysForForm(globalPaysId);
+            if (globalPaysId) {
+                document.getElementById('pays_id').value = globalPaysId;
+                await loadDepartements();
+            }
+
+            document.getElementById('commerceModal').classList.add('modal-open');
+            history.replaceState({}, '', '/pois');
+        };
+
+        async function saveUnifiedPoi(isEdit, editingId) {
+            const shapeId = document.getElementById('poiShape').value || 'point';
+            const categorie = getPoiCategorie();
+            const isPoint = shapeId === 'point';
+            const name = document.getElementById('nom').value.trim();
+            if (!name) {
+                alert('Le nom est obligatoire.');
+                return;
+            }
+
+            let geometry = null;
+            if (!isPoint || document.getElementById('poiGeometryJson').value) {
+                try {
+                    geometry = JSON.parse(document.getElementById('poiGeometryJson').value || 'null');
+                } catch (e) {
+                    geometry = null;
+                }
+            }
+            if (!isPoint && !geometry) {
+                alert('Géométrie manquante. Repassez par la carte pour tracer le POI.');
+                PoiWizard.openShapePicker();
+                return;
+            }
+
+            const properties = {};
+            if (shapeId === 'pylon') {
+                properties.radius_m = parseFloat(document.getElementById('poiRadius').value) || 500;
+            }
+            if (shapeId === 'pipeline') {
+                properties.diameter_mm = parseFloat(document.getElementById('poiDiameter').value) || 400;
+            }
+
+            const typeCommerceId = document.getElementById('type_commerce_id').value
+                ? parseInt(document.getElementById('type_commerce_id').value, 10) : null;
+            const tc = getSelectedTypeCommerce();
+
+            const payload = {
+                nom: name,
+                categorie,
+                feature_type: shapeId,
+                proprietaire: document.getElementById('proprietaire').value.trim() || null,
+                telephone: document.getElementById('telephone').value.trim() || null,
+                type_commerce_id: typeCommerceId,
+                description: document.getElementById('poiDescription').value.trim() || null,
+            };
+
+            if (IS_AGENT_TERRAIN && saveAsDraftNext) {
+                payload.save_as_draft = true;
+            }
+            saveAsDraftNext = false;
+
+            if (geometry) {
+                payload.geometry = geometry;
+                payload.properties = properties;
+            }
+            if (isPoint) {
+                payload.quartier_village_id = parseInt(document.getElementById('quartier_village_id').value, 10) || null;
+                payload.adresse = document.getElementById('adresse').value.trim() || null;
+                payload.marche_id = document.getElementById('marche_id').value
+                    ? parseInt(document.getElementById('marche_id').value, 10) : null;
+                payload.latitude = document.getElementById('latitude').value
+                    ? parseFloat(document.getElementById('latitude').value) : null;
+                payload.longitude = document.getElementById('longitude').value
+                    ? parseFloat(document.getElementById('longitude').value) : null;
+                if (!isEdit) {
+                    payload.code_unique = document.getElementById('code_unique').value.trim() || null;
+                }
+            }
+
+            if (typeCommerceId && tc) {
+                payload.donnees_administratives = collectDonneesAdministrativesForType(
+                    tc, getTypeChampsScope(typeCommerceId)
+                );
+            }
+
+            if (poiHasFiscalTaxes()) {
+                const taxesSelectionnees = [];
+                document.querySelectorAll('input[type="checkbox"][name="taxe"]:checked').forEach(checkbox => {
+                    const taxeId = parseInt(checkbox.value, 10);
+                    const montantInput = document.getElementById(`montant-taxe-${taxeId}`);
+                    taxesSelectionnees.push({
+                        taxe_id: taxeId,
+                        montant_personnalise: montantInput && montantInput.value ? parseFloat(montantInput.value) : null,
+                    });
+                });
+                if (!taxesSelectionnees.length) {
+                    alert('Veuillez sélectionner au moins une taxe pour un contribuable.');
+                    return;
+                }
+                payload.taxes = taxesSelectionnees;
+            }
+
+            if (isPoint && poiHasFiscalTaxes() && !isEdit && !payload.quartier_village_id) {
+                alert('Veuillez sélectionner un quartier/village.');
+                return;
+            }
+
+            if (poiHasFiscalTaxes() && !document.getElementById('telephone').value.trim()) {
+                alert('Le numéro de téléphone est obligatoire pour créer le compte contribuable.');
+                return;
+            }
+
+            const selectedPaysId = getSelectedPaysId();
+            if (!poiHasFiscalTaxes() && !selectedPaysId) {
+                alert('Veuillez sélectionner un pays pour cette infrastructure.');
+                return;
+            }
+            if (selectedPaysId) {
+                payload.pays_id = parseInt(selectedPaysId, 10);
+            }
+
+            const url = isEdit ? `/api/boutiques/${editingId}` : '/api/boutiques';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include',
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    alert('Erreur : ' + (result.error || 'Impossible d\'enregistrer'));
+                    return;
+                }
+                const savedId = isEdit ? parseInt(editingId, 10) : result.id;
+                if (isPoint && poiHasFiscalTaxes()) {
+                    await uploadPoiPhotoIfNeeded(savedId);
+                }
+                const st = result.statut_validation || 'valide';
+                let msg = isEdit ? 'POI modifié avec succès.' : `POI enregistré.\nCode : ${result.code_unique}`;
+                if (st === 'en_attente') {
+                    msg += '\n\nLe POI a été soumis à validation.';
+                } else if (st === 'brouillon') {
+                    msg += '\n\nBrouillon enregistré — ouvrez-le et cliquez « Soumettre à validation ».';
+                } else if (st === 'valide') {
+                    msg += '\n\nPOI validé et visible sur la carte.';
+                }
+                if (result.commercant_warning) {
+                    msg += '\n\n⚠ ' + result.commercant_warning;
+                }
+                PoiWizard.clearPending();
+                closeCommerceModal();
+                const form = document.getElementById('boutiqueForm');
+                form.reset();
+                delete form.dataset.editingId;
+                editingBoutiqueId = null;
+                loadBoutiques();
+                if (result.commercant_access) {
+                    showCommercantAccessModal(result.commercant_access);
+                } else {
+                    alert(msg);
+                }
+            } catch (error) {
+                alert('Erreur de connexion: ' + error.message);
+            }
+        }
+
+        function submitPoiForm(event) {
+            event.preventDefault();
+            const form = document.getElementById('boutiqueForm');
+            const editingId = form.dataset.editingId;
+            saveUnifiedPoi(!!editingId, editingId || null);
+        }
+
+        let allInfrastructures = [];
+        let allBoutiques = [];
+        let editingBoutiqueId = null;
+        const poisRowsPerPage = 8;
+        let poisCurrentPage = 1;
+        const geoRowsPerPage = 8;
+        let geoCurrentPage = 1;
+
+        function getLocalisation(boutique) {
+            return boutique.quartier_village 
+                ? `${boutique.quartier_village.nom || ''}${boutique.commune ? ', ' + boutique.commune.nom : ''}`
+                : (boutique.arrondissement || '');
+        }
+
+        function formatPoiLocalisation(p) {
+            const parts = [];
+            if (p.description && String(p.description).trim()) {
+                parts.push(String(p.description).trim());
+            }
+            const coords = extractGeometryCoords(p.geometry || (p.latitude != null ? {
+                type: 'Point', coordinates: [p.longitude, p.latitude],
+            } : null));
+            if (coords) {
+                parts.push(`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
+            } else if (p.quartier_village) {
+                const qv = p.quartier_village;
+                const loc = [qv.nom, p.commune?.nom].filter(Boolean).join(', ');
+                if (loc) parts.push(loc);
+            } else if (p.adresse) {
+                parts.push(p.adresse);
+            }
+            return parts.length ? parts.join(' — ') : 'Voir sur la carte';
+        }
+
+        function formatFeatureLocalisation(f) {
+            return formatPoiLocalisation(f);
+        }
+
+        function getBoutiquePoiList() {
+            return allBoutiques.map(b => {
+                const ft = b.feature_type || 'point';
+                const meta = PoiWizard.getShape(ft);
+                const shapeLabel = meta
+                    ? `${meta.icon || '📍'} ${meta.label || ft}`
+                    : (b.feature_type_icon ? `${b.feature_type_icon} ${b.feature_type_label || ft}` : '📍 Point');
+                return {
+                kind: 'boutique',
+                shapeId: ft,
+                shapeLabel,
+                id: b.id,
+                code: b.code_unique,
+                nom: b.nom,
+                typeLabel: getPoiTypeLabel(b),
+                responsable: b.proprietaire,
+                telephone: b.telephone,
+                localisation: ft === 'point' ? getLocalisation(b) : formatPoiLocalisation(b),
+                statutHtml: b.a_jour
+                    ? '<span class="status-success">✅ À jour</span>'
+                    : '<span class="status-warning">❌ Non à jour</span>',
+                montantHtml: `<strong class="${(b.montant_a_recouvrer || 0) > 0 ? 'montant-due' : 'montant-ok'}">${formatMontantFcfa(b.montant_a_recouvrer || 0)}</strong>`,
+                raw: b,
+            };
+            }).sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+        }
+
+        function getGeoFeatureList() {
+            return allInfrastructures.map(f => ({
+                kind: 'infra',
+                shapeId: f.feature_type || 'point',
+                shapeLabel: `${f.feature_type_icon || '📍'} ${f.feature_type_label || f.feature_type || '—'}`,
+                id: f.id,
+                code: f.code_unique,
+                nom: f.nom,
+                typeLabel: f.type_commerce?.nom || '—',
+                paysLabel: f.pays?.nom || '—',
+                localisation: formatPoiLocalisation(f),
+                statutHtml: `<span class="poi-statut-badge statut-${f.statut_validation || 'brouillon'}">${VALIDATION_LABELS[f.statut_validation] || f.statut_validation}</span>`,
+                raw: f,
+            })).sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+        }
+
+        function filterBoutiques() {
+            const filtered = filterBoutiquePois(getBoutiquePoiList());
+            poisCurrentPage = 1;
+            renderBoutiques(filtered);
+        }
+
+        function filterGeoFeatures() {
+            const filtered = filterGeoPois(getGeoFeatureList());
+            geoCurrentPage = 1;
+            renderGeoFeatures(filtered);
+        }
+
+        function filterBoutiquePois(items) {
+            const searchTerm = (document.getElementById('searchCommerce').value || '').trim().toLowerCase();
+            const statutFilter = document.getElementById('filterStatutPoi').value;
+            const words = searchTerm ? searchTerm.split(/\s+/).filter(w => w.length > 0) : [];
+            let filtered = items;
+
+            if (statutFilter === 'a_jour') {
+                filtered = filtered.filter(p => p.raw.a_jour);
+            } else if (statutFilter === 'non_a_jour') {
+                filtered = filtered.filter(p => !p.raw.a_jour);
+            }
+
+            if (words.length > 0) {
+                filtered = filtered.filter(p => {
+                    const searchable = [
+                        p.code, p.nom, p.typeLabel, p.responsable, p.telephone,
+                        p.localisation, p.shapeLabel,
+                    ].join(' ').toLowerCase();
+                    return words.every(word => searchable.includes(word));
+                });
+            }
+            return filtered;
+        }
+
+        function filterGeoPois(items) {
+            const searchTerm = (document.getElementById('searchGeo')?.value || '').trim().toLowerCase();
+            const shapeFilter = document.getElementById('filterGeoShape')?.value || '';
+            const validationFilter = document.getElementById('filterGeoValidation')?.value || '';
+            const words = searchTerm ? searchTerm.split(/\s+/).filter(w => w.length > 0) : [];
+            let filtered = items;
+
+            if (shapeFilter) {
+                filtered = filtered.filter(p => p.shapeId === shapeFilter);
+            }
+
+            if (validationFilter) {
+                filtered = filtered.filter(p => (p.raw.statut_validation || 'brouillon') === validationFilter);
+            }
+
+            if (words.length > 0) {
+                filtered = filtered.filter(p => {
+                    const searchable = [
+                        p.code, p.nom, p.typeLabel, p.paysLabel, p.localisation, p.shapeLabel,
+                    ].join(' ').toLowerCase();
+                    return words.every(word => searchable.includes(word));
+                });
+            }
+            return filtered;
+        }
+
+        function formatMontantFcfa(value) {
+            return new Intl.NumberFormat('fr-FR').format(value || 0) + ' FCFA';
+        }
+
+        function formatPercent(value, digits = 1) {
+            if (value == null || isNaN(value)) return '—';
+            return `${Number(value).toFixed(digits)} %`;
+        }
+
+        function formatNumber(value, digits = 0) {
+            if (value == null || isNaN(value)) return '—';
+            return new Intl.NumberFormat('fr-FR', {
+                maximumFractionDigits: digits,
+                minimumFractionDigits: digits,
+            }).format(value);
+        }
+
+        function hasActiveContribFilters() {
+            return (document.getElementById('searchCommerce').value || '').trim() !== ''
+                || document.getElementById('filterStatutPoi').value !== '';
+        }
+
+        function hasActiveGeoFilters() {
+            return (document.getElementById('searchGeo')?.value || '').trim() !== ''
+                || (document.getElementById('filterGeoShape')?.value || '') !== ''
+                || (document.getElementById('filterGeoValidation')?.value || '') !== '';
+        }
+
+        function renderStatCard(label, value, variant) {
+            const cls = variant ? ` stat-card ${variant}` : ' stat-card';
+            return `<div class="${cls.trim()}"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`;
+        }
+
+        function computeContribStats(rawList) {
+            const total = rawList.length;
+            let aJour = 0;
+            let montantARecouvrer = 0;
+            let montantRecouvre = 0;
+            let sansCompte = 0;
+            let sansTaxes = 0;
+            const parType = {};
+            const parStatut = { a_jour: 0, non_a_jour: 0 };
+
+            rawList.forEach(b => {
+                if (b.a_jour) {
+                    aJour += 1;
+                    parStatut.a_jour += 1;
+                } else {
+                    parStatut.non_a_jour += 1;
+                }
+                montantARecouvrer += b.montant_a_recouvrer || 0;
+                montantRecouvre += b.montant_recouvre || 0;
+                if (!b.a_compte_commercant) sansCompte += 1;
+                if (!b.taxes || b.taxes.length === 0) sansTaxes += 1;
+                const typeName = b.type_commerce?.nom || 'Non spécifié';
+                parType[typeName] = (parType[typeName] || 0) + 1;
+            });
+
+            const reste = Math.max(0, montantARecouvrer - montantRecouvre);
+            return {
+                total,
+                aJour,
+                nonAJour: total - aJour,
+                tauxPaiement: total > 0 ? (aJour / total * 100) : 0,
+                montantARecouvrer,
+                montantRecouvre,
+                reste,
+                tauxRecouvrement: montantARecouvrer > 0 ? (montantRecouvre / montantARecouvrer * 100) : 100,
+                sansCompte,
+                sansTaxes,
+                parType,
+                parStatut,
+            };
+        }
+
+        function renderContribStats(items) {
+            const panel = document.getElementById('poisStatsPanel');
+            const grid = document.getElementById('poisStatsGrid');
+            const scope = document.getElementById('poisStatsScope');
+            if (!panel || !grid) return;
+
+            const rawList = items.map(p => p.raw);
+            const stats = computeContribStats(rawList);
+            const totalAll = allBoutiques.length;
+            const filtered = hasActiveContribFilters();
+
+            if (totalAll === 0) {
+                panel.hidden = true;
+                return;
+            }
+            panel.hidden = false;
+
+            if (scope) {
+                const p = Object.fromEntries(getPoisPeriodeParams());
+                scope.textContent = filtered && items.length !== totalAll
+                    ? `Résultat filtré : ${items.length} / ${totalAll}`
+                    : `Période : ${formatPoisPeriodeLabel(p)}`;
+            }
+
+            grid.innerHTML = [
+                renderStatCard('Contribuables', stats.total, 'info'),
+                renderStatCard('À jour', `${stats.aJour} <small>(${formatPercent(stats.tauxPaiement, 0)})</small>`, 'success'),
+                renderStatCard('Non à jour', stats.nonAJour, stats.nonAJour > 0 ? 'warning' : ''),
+                renderStatCard('À recouvrer', formatMontantFcfa(stats.montantARecouvrer), 'warning'),
+                renderStatCard('Recouvré', formatMontantFcfa(stats.montantRecouvre), 'success'),
+                renderStatCard('Taux recouvrement', formatPercent(stats.tauxRecouvrement, 1), stats.tauxRecouvrement >= 80 ? 'success' : 'warning'),
+                renderStatCard('Reste à recouvrer', formatMontantFcfa(stats.reste), stats.reste > 0 ? 'warning' : 'success'),
+                renderStatCard('Sans compte commerçant', stats.sansCompte, stats.sansCompte > 0 ? 'warning' : ''),
+            ].join('');
+        }
+
+        const GEO_SHAPE_LABELS = {
+            pylon: '🗼 Pylône',
+            pipeline: '🔧 Pipeline',
+            parcel: '📐 Parcelle',
+            perimeter: '⭕ Périmètre',
+            point: '📍 Point',
+        };
+
+        function computeInfraStats(rawList) {
+            const parForme = {};
+            const parValidation = {};
+            const parType = {};
+            let totalLengthM = 0;
+            let totalAreaHa = 0;
+            let totalPerimeterM = 0;
+            let sansGeo = 0;
+            let sansType = 0;
+            let pipelines = 0;
+            let parcelles = 0;
+
+            rawList.forEach(f => {
+                const forme = f.feature_type || 'point';
+                parForme[forme] = (parForme[forme] || 0) + 1;
+                const st = f.statut_validation || 'brouillon';
+                parValidation[st] = (parValidation[st] || 0) + 1;
+                const typeName = f.type_commerce?.nom || 'Non spécifié';
+                parType[typeName] = (parType[typeName] || 0) + 1;
+
+                if (forme === 'pipeline') {
+                    pipelines += 1;
+                    totalLengthM += Number(f.length_m) || 0;
+                }
+                if (forme === 'parcel') {
+                    parcelles += 1;
+                    totalAreaHa += Number(f.area_ha) || 0;
+                }
+                if (forme === 'perimeter') {
+                    totalPerimeterM += Number(f.perimeter_m) || 0;
+                }
+
+                const hasCoords = (f.latitude != null && f.longitude != null
+                    && f.latitude !== 0 && f.longitude !== 0);
+                const hasGeom = f.geometry && f.geometry.coordinates;
+                if (!hasCoords && !hasGeom) sansGeo += 1;
+                if (!f.type_commerce_id) sansType += 1;
+            });
+
+            return {
+                total: rawList.length,
+                parForme,
+                parValidation,
+                parType,
+                totalLengthM,
+                totalAreaHa,
+                totalPerimeterM,
+                sansGeo,
+                sansType,
+                pipelines,
+                parcelles,
+                valides: parValidation.valide || 0,
+                enAttente: parValidation.en_attente || 0,
+            };
+        }
+
+        function renderInfraStats(items) {
+            const panel = document.getElementById('geoStatsPanel');
+            const grid = document.getElementById('geoStatsGrid');
+            const scope = document.getElementById('geoStatsScope');
+            if (!panel || !grid) return;
+
+            const rawList = items.map(p => p.raw);
+            const stats = computeInfraStats(rawList);
+            const totalAll = allInfrastructures.length;
+
+            if (totalAll === 0) {
+                panel.hidden = true;
+                return;
+            }
+            panel.hidden = false;
+
+            if (scope) {
+                scope.textContent = hasActiveGeoFilters() && items.length !== totalAll
+                    ? `Résultat filtré : ${items.length} / ${totalAll}`
+                    : `${totalAll} infrastructure${totalAll > 1 ? 's' : ''} au total`;
+            }
+
+            const lengthLabel = stats.totalLengthM >= 1000
+                ? `${formatNumber(stats.totalLengthM / 1000, 2)} km`
+                : `${formatNumber(stats.totalLengthM, 0)} m`;
+
+            grid.innerHTML = [
+                renderStatCard('Infrastructures', stats.total, 'info'),
+                renderStatCard('Validées', stats.valides, 'success'),
+                renderStatCard('En attente', stats.enAttente, stats.enAttente > 0 ? 'warning' : ''),
+                renderStatCard('Pipelines', stats.pipelines, ''),
+                renderStatCard('Longueur réseau', lengthLabel, 'info'),
+                renderStatCard('Parcelles', stats.parcelles, ''),
+                renderStatCard('Surface totale', `${formatNumber(stats.totalAreaHa, 2)} ha`, 'info'),
+                renderStatCard('Sans localisation', stats.sansGeo, stats.sansGeo > 0 ? 'warning' : ''),
+            ].join('');
+        }
+
+        function renderTechStats(stats, typeName) {
+            const panel = document.getElementById('techStatsPanel');
+            const grid = document.getElementById('techStatsGrid');
+            const champsEl = document.getElementById('techStatsChamps');
+            const scope = document.getElementById('techStatsScope');
+            if (!panel || !grid || !stats) {
+                if (panel) panel.hidden = true;
+                return;
+            }
+
+            panel.hidden = false;
+            const q = (document.getElementById('techSearchInput')?.value || '').trim();
+            if (scope) {
+                scope.textContent = q && stats.total_filtre !== stats.total_poi
+                    ? `${stats.total_filtre} / ${stats.total_poi} POI (filtre actif)`
+                    : typeName || '';
+            }
+
+            grid.innerHTML = [
+                renderStatCard('POI total', stats.total_poi, 'info'),
+                renderStatCard('Contribuables', stats.par_categorie.contribuable || 0, ''),
+                renderStatCard('Infrastructures', stats.par_categorie.infrastructure || 0, ''),
+                renderStatCard('Fiches complètes', `${stats.poi_complet} <small>(${formatPercent(stats.taux_completude_globale, 0)})</small>`, 'success'),
+                renderStatCard('Sans donnée technique', stats.poi_vide, stats.poi_vide > 0 ? 'warning' : ''),
+                renderStatCard('Taux remplissage moyen', formatPercent(stats.taux_remplissage_moyen, 0), 'info'),
+            ].join('');
+
+            if (champsEl) {
+                const champs = stats.champs || [];
+                if (!champs.length) {
+                    champsEl.innerHTML = '<p class="field-help">Aucun champ technique défini pour ce type.</p>';
+                    return;
+                }
+                const rows = champs.map(c => {
+                    const barWidth = Math.max(4, c.taux_remplissage || 0);
+                    let numericHtml = '';
+                    if (c.numeric) {
+                        const n = c.numeric;
+                        numericHtml = `<div class="tech-champ-numeric">
+                            min ${formatNumber(n.min, 2)} · max ${formatNumber(n.max, 2)} · moy ${formatNumber(n.avg, 2)} · Σ ${formatNumber(n.sum, 2)}
+                        </div>`;
+                    }
+                    return `<div class="tech-champ-stat-row">
+                        <div class="tech-champ-stat-head">
+                            <strong>${c.label}</strong>
+                            <span class="tech-champ-type">${c.type_champ}</span>
+                        </div>
+                        <div class="poi-breakdown-bar-wrap"><div class="poi-breakdown-bar is-tech" style="width:${barWidth}%"></div></div>
+                        <div class="tech-champ-stat-meta">
+                            <span>${c.rempli} / ${stats.total_poi} POI (${formatPercent(c.taux_remplissage, 0)})</span>
+                            ${numericHtml}
+                        </div>
+                    </div>`;
+                }).join('');
+                champsEl.innerHTML = `<h4 class="poi-breakdown-title">Taux de remplissage par champ</h4><div class="tech-champ-stats-list">${rows}</div>`;
+            }
+        }
+
+        function updatePoisSummary(items) {
+            renderContribStats(items);
+        }
+
+        function renderBoutiques(items) {
+            const tbody = document.getElementById('boutiquesTableBody');
+            const pager = document.getElementById('poisPagination');
+            tbody.innerHTML = '';
+
+            updatePoisSummary(items);
+
+            const totalAll = allBoutiques.length;
+            const countEl = document.getElementById('searchCount');
+            if (totalAll > 0) {
+                countEl.textContent = items.length === totalAll
+                    ? `${totalAll} contribuable${totalAll > 1 ? 's' : ''}`
+                    : `${items.length} / ${totalAll} contribuables`;
+            } else {
+                countEl.textContent = '';
+            }
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="no-data">Aucun contribuable trouvé</td></tr>';
+                if (pager) pager.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(items.length / poisRowsPerPage));
+            if (poisCurrentPage > totalPages) poisCurrentPage = totalPages;
+            if (poisCurrentPage < 1) poisCurrentPage = 1;
+            const start = (poisCurrentPage - 1) * poisRowsPerPage;
+            const pageItems = items.slice(start, start + poisRowsPerPage);
+
+            pageItems.forEach(poi => {
+                const row = document.createElement('tr');
+                const boutique = poi.raw;
+                const localisation = poi.localisation || '-';
+                const hasCoords = (boutique.latitude != null && boutique.longitude != null &&
+                    boutique.latitude !== 0 && boutique.longitude !== 0 &&
+                    !isNaN(parseFloat(boutique.latitude)) && !isNaN(parseFloat(boutique.longitude)))
+                    || (boutique.geometry && boutique.geometry.coordinates);
+                const carteHref = `/carte?poi_id=${boutique.id}`;
+                const localisationCell = hasCoords
+                    ? `<a href="${carteHref}" target="_blank" style="color: #009E60; text-decoration: none; font-weight: 600;" title="Voir sur la carte">📍 ${localisation}</a>`
+                    : `<span style="color: #999;">${localisation} (non géolocalisé)</span>`;
+                const commercantOption = boutique.a_compte_commercant
+                    ? `<option value="commercant">👤 Espace contribuable</option>`
+                    : `<option value="commercant-create">👤+ Créer accès contribuable</option>`;
+                const carteOption = hasCoords ? `<option value="carte">🗺️ Voir sur la carte</option>` : '';
+
+                row.innerHTML = `
+                    <td>${poi.shapeLabel}</td>
+                    <td><strong>${poi.code}</strong></td>
+                    <td>${poi.nom}</td>
+                    <td>${poi.typeLabel}</td>
+                    <td>${poi.responsable || '-'}</td>
+                    <td>${poi.telephone || '-'}</td>
+                    <td>${localisationCell}</td>
+                    <td>${poi.statutHtml}</td>
+                    <td>${poi.montantHtml}</td>
+                    <td>
+                        <select class="poi-action-select" aria-label="Actions pour ${poi.nom}"
+                            data-id="${boutique.id}"
+                            data-code="${boutique.code_unique}"
+                            data-nom="${(boutique.nom || '').replace(/"/g, '&quot;')}"
+                            data-telephone="${(boutique.telephone || '').replace(/"/g, '&quot;')}"
+                            onchange="handlePoiAction(this)">
+                            <option value="">— Actions —</option>
+                            <option value="qr">📱 Voir QR Code</option>
+                            <option value="scan">🔍 Vérifier</option>
+                            ${carteOption}
+                            <option value="paiements">💰 Voir paiements</option>
+                            ${commercantOption}
+                            <option value="edit">✏️ Modifier</option>
+                            <option value="delete">🗑️ Supprimer</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (pager) {
+                renderPagination(pager, poisCurrentPage, totalPages, (nextPage) => {
+                    poisCurrentPage = nextPage;
+                    renderBoutiques(items);
+                });
+            }
+        }
+
+        function renderGeoFeatures(items) {
+            const tbody = document.getElementById('geoTableBody');
+            const pager = document.getElementById('geoPagination');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            renderInfraStats(items);
+
+            const totalAll = allInfrastructures.length;
+            const countEl = document.getElementById('searchGeoCount');
+            if (countEl) {
+                if (totalAll > 0) {
+                    countEl.textContent = items.length === totalAll
+                        ? `${totalAll} infrastructure${totalAll > 1 ? 's' : ''}`
+                        : `${items.length} / ${totalAll} infrastructures`;
+                } else {
+                    countEl.textContent = '';
+                }
+            }
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">Aucune infrastructure trouvée</td></tr>';
+                if (pager) pager.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(items.length / geoRowsPerPage));
+            if (geoCurrentPage > totalPages) geoCurrentPage = totalPages;
+            if (geoCurrentPage < 1) geoCurrentPage = 1;
+            const start = (geoCurrentPage - 1) * geoRowsPerPage;
+            const pageItems = items.slice(start, start + geoRowsPerPage);
+
+            pageItems.forEach(poi => {
+                const row = document.createElement('tr');
+                const localisationCell = `<a href="/carte?poi_id=${poi.id}" target="_blank" style="color: #009E60; text-decoration: none; font-weight: 600;" title="Voir sur la carte">📍 ${poi.localisation}</a>`;
+                row.innerHTML = `
+                    <td>${poi.shapeLabel}</td>
+                    <td><strong>${poi.code}</strong></td>
+                    <td>${poi.nom}</td>
+                    <td>${poi.typeLabel}</td>
+                    <td>${poi.paysLabel}</td>
+                    <td>${localisationCell}</td>
+                    <td>${poi.statutHtml}</td>
+                    <td>
+                        <select class="poi-action-select" aria-label="Actions pour ${poi.nom}"
+                            data-infra-id="${poi.id}"
+                            data-nom="${(poi.nom || '').replace(/"/g, '&quot;')}"
+                            onchange="handleInfraAction(this)">
+                            <option value="">— Actions —</option>
+                            <option value="carte">🗺️ Voir sur la carte</option>
+                            <option value="edit">✏️ Modifier</option>
+                            <option value="delete">🗑️ Désactiver</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (pager) {
+                renderPagination(pager, geoCurrentPage, totalPages, (nextPage) => {
+                    geoCurrentPage = nextPage;
+                    renderGeoFeatures(items);
+                });
+            }
+        }
+
+        async function handleInfraAction(select) {
+            const action = select.value;
+            if (!action) return;
+            const id = select.dataset.infraId;
+            const nom = select.dataset.nom;
+            select.value = '';
+
+            if (action === 'carte') {
+                window.open(`/carte?poi_id=${id}`, '_blank');
+            } else if (action === 'edit') {
+                editBoutique(parseInt(id, 10));
+            } else if (action === 'delete') {
+                if (!confirm(`Désactiver l'infrastructure « ${nom} » ?`)) return;
+                try {
+                    const response = await fetch(`/api/boutiques/${id}`, { method: 'DELETE', credentials: 'include' });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Erreur');
+                    }
+                    alert('Infrastructure désactivée.');
+                    loadBoutiques();
+                } catch (e) {
+                    alert('Erreur : ' + e.message);
+                }
+            }
+        }
+
+        function renderPagination(container, currentPage, totalPages, onChange) {
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = '';
+            const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+            const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+            container.innerHTML = `
+                <button type="button" class="btn-small" data-page="prev" ${prevDisabled}>← Précédent</button>
+                <span class="pagination-label">Page ${currentPage} / ${totalPages}</span>
+                <button type="button" class="btn-small" data-page="next" ${nextDisabled}>Suivant →</button>
+            `;
+            container.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
+                if (currentPage > 1) onChange(currentPage - 1);
+            });
+            container.querySelector('[data-page="next"]')?.addEventListener('click', () => {
+                if (currentPage < totalPages) onChange(currentPage + 1);
+            });
+        }
+
+        function getPoisPeriodeParams() {
+            return new URLSearchParams({
+                mois_debut: document.getElementById('poisMoisDebut').value,
+                annee_debut: document.getElementById('poisAnneeDebut').value,
+                mois_fin: document.getElementById('poisMoisFin').value,
+                annee_fin: document.getElementById('poisAnneeFin').value,
+            });
+        }
+
+        function formatPoisPeriodeLabel(p) {
+            const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            if (p.mois_debut === p.mois_fin && p.annee_debut === p.annee_fin) {
+                return `${moisNoms[p.mois_fin - 1]} ${p.annee_fin}`;
+            }
+            return `${moisNoms[p.mois_debut - 1]} ${p.annee_debut} — ${moisNoms[p.mois_fin - 1]} ${p.annee_fin}`;
+        }
+
+        async function loadBoutiques() {
+            try {
+                const params = getPoisPeriodeParams();
+                if (window.GeoTaxCountry) GeoTaxCountry.withParams(params);
+                const infraParams = new URLSearchParams({ categorie: 'infrastructure' });
+                if (window.GeoTaxCountry) GeoTaxCountry.withParams(infraParams);
+                const [boutiquesRes, infraRes] = await Promise.all([
+                    fetch(`/api/boutiques?${params}&categorie=contribuable`),
+                    fetch(`/api/boutiques?${infraParams}`),
+                ]);
+                const data = await boutiquesRes.json();
+                const infraData = await infraRes.json();
+
+                allBoutiques = (Array.isArray(data) ? data : (data.boutiques || []))
+                    .filter(b => (b.statut_validation || 'valide') === 'valide');
+
+                allInfrastructures = (infraData.boutiques || []).filter(b => b.active !== false);
+
+                document.getElementById('searchCommerce').value = '';
+                document.getElementById('filterStatutPoi').value = '';
+                const searchGeo = document.getElementById('searchGeo');
+                const filterGeoShape = document.getElementById('filterGeoShape');
+                const filterGeoValidation = document.getElementById('filterGeoValidation');
+                if (searchGeo) searchGeo.value = '';
+                if (filterGeoShape) filterGeoShape.value = '';
+                if (filterGeoValidation) filterGeoValidation.value = '';
+                filterBoutiques();
+                filterGeoFeatures();
+            } catch (error) {
+                console.error('Erreur lors du chargement des POI :', error);
+                allBoutiques = [];
+                allInfrastructures = [];
+                document.getElementById('boutiquesTableBody').innerHTML =
+                    '<tr><td colspan="10" class="error">Erreur lors du chargement</td></tr>';
+                document.getElementById('searchCount').textContent = '';
+                const geoBody = document.getElementById('geoTableBody');
+                if (geoBody) {
+                    geoBody.innerHTML = '<tr><td colspan="7" class="error">Erreur lors du chargement</td></tr>';
+                }
+                const geoCount = document.getElementById('searchGeoCount');
+                if (geoCount) geoCount.textContent = '';
+            }
+        }
+
+        function handlePoiAction(select) {
+            const action = select.value;
+            if (!action) return;
+
+            const id = parseInt(select.dataset.id, 10);
+            const code = select.dataset.code || '';
+            const nom = select.dataset.nom || '';
+            const telephone = select.dataset.telephone || '';
+
+            switch (action) {
+                case 'qr':
+                    window.open(`/api/boutiques/${id}/qr`, '_blank');
+                    break;
+                case 'scan':
+                    window.location.href = `/scan?code=${encodeURIComponent(code)}`;
+                    break;
+                case 'carte':
+                    window.open(`/carte?poi_id=${id}`, '_blank');
+                    break;
+                case 'paiements':
+                    viewPaiements(id, code);
+                    break;
+                case 'commercant':
+                    window.open('/commercant', '_blank');
+                    break;
+                case 'commercant-create':
+                    window.open(`/commercant/inscription?code=${encodeURIComponent(code)}&telephone=${encodeURIComponent(telephone)}`, '_blank');
+                    break;
+                case 'edit':
+                    editBoutique(id);
+                    break;
+                case 'delete':
+                    deleteBoutique(id, nom);
+                    break;
+            }
+
+            select.value = '';
+        }
+
+        async function editBoutique(boutiqueId) {
+            try {
+                const response = await fetch(`/api/boutiques/${boutiqueId}`);
+                if (!response.ok) throw new Error('Erreur lors du chargement');
+                const boutique = await response.json();
+
+                await loadTaxesForForm();
+                
+                // Remplir le formulaire
+                document.getElementById('code_unique').value = boutique.code_unique;
+                document.getElementById('nom').value = boutique.nom;
+                document.getElementById('type_commerce_id').value = boutique.type_commerce_id || '';
+                document.getElementById('proprietaire').value = boutique.proprietaire || '';
+                document.getElementById('telephone').value = boutique.telephone || '';
+                document.getElementById('adresse').value = boutique.adresse || '';
+                document.getElementById('latitude').value = boutique.latitude || '';
+                document.getElementById('longitude').value = boutique.longitude || '';
+
+                if (boutique.type_commerce_id) {
+                    onTypeCommerceChange();
+                    fillAdminFieldsFromType(boutique.type_commerce_id, boutique.donnees_administratives || {});
+                } else {
+                    buildTypeChampsPanel(null, []);
+                    updateAdminCategoryUI();
+                }
+                updateSubmitValidationButton(boutique);
+                if (boutique.photo_url) {
+                    const preview = document.getElementById('poiPhotoPreview');
+                    preview.innerHTML = `<img src="${boutique.photo_url}" alt="Photo POI">`;
+                    preview.hidden = false;
+                }
+
+                // Charger les sélections géographiques (cascade: pays -> département -> commune -> quartier)
+                const paysId = boutique.pays?.id || boutique.pays_id;
+                await loadPaysForForm(paysId);
+                if (paysId) {
+                    document.getElementById('pays_id').value = paysId;
+                    await loadDepartements();
+                }
+                if (boutique.quartier_village_id) {
+                    const qv = boutique.quartier_village;
+                    if (qv && qv.commune) {
+                        const commune = qv.commune;
+                        if (commune.departement_id) {
+                            document.getElementById('departement_id').value = commune.departement_id;
+                            await loadCommunes();
+                        }
+                        if (qv.commune_id) {
+                            document.getElementById('commune_id').value = qv.commune_id;
+                            await loadQuartiers();
+                        }
+                    }
+                    document.getElementById('quartier_village_id').value = boutique.quartier_village_id;
+                    await loadMarches();
+                    if (boutique.marche_id) {
+                        document.getElementById('marche_id').value = boutique.marche_id;
+                    }
+                }
+                
+                // Charger les taxes associées
+                if (boutique.taxes && boutique.taxes.length > 0) {
+                    boutique.taxes.forEach(bt => {
+                        const checkbox = document.getElementById(`taxe-${bt.taxe_id}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            const montantInput = document.getElementById(`montant-taxe-${bt.taxe_id}`);
+                            if (montantInput && bt.montant_personnalise) {
+                                montantInput.value = bt.montant_personnalise;
+                            }
+                        }
+                    });
+                    updateTaxesSummary();
+                }
+                
+                // Modifier le formulaire pour l'édition
+                const form = document.getElementById('boutiqueForm');
+                form.dataset.editingId = boutiqueId;
+                editingBoutiqueId = boutiqueId;
+                document.getElementById('formTitle').textContent = '✏️ Modifier le POI';
+                document.getElementById('submitBtn').textContent = '💾 Enregistrer les modifications';
+                switchPoiTab('administratif');
+                document.getElementById('poiCategorie').value = boutique.categorie || 'contribuable';
+                const shapeId = boutique.feature_type || 'point';
+                if (boutique.geometry) {
+                    document.getElementById('poiGeometryJson').value = JSON.stringify(boutique.geometry);
+                }
+                document.getElementById('poiDescription').value = boutique.description || '';
+                const props = boutique.properties || {};
+                if (shapeId === 'pylon' && document.getElementById('poiRadius')) {
+                    document.getElementById('poiRadius').value = props.radius_m || boutique.radius_m || 500;
+                }
+                if (shapeId === 'pipeline' && document.getElementById('poiDiameter')) {
+                    document.getElementById('poiDiameter').value = props.diameter_mm || 400;
+                }
+
+                applyPoiShapeUI(shapeId, true);
+                document.getElementById('commerceModal').classList.add('modal-open');
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function deleteBoutique(boutiqueId, nom) {
+            if (!confirm(`Désactiver le POI « ${nom} » ?\n\nL'historique des paiements est conservé.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/boutiques/${boutiqueId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erreur lors de la suppression');
+                }
+                
+                alert('POI désactivé avec succès.');
+                loadBoutiques();
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function viewPaiements(boutiqueId, codeBoutique) {
+            try {
+                document.getElementById('releveModalTitle').textContent = `Relevé — ${codeBoutique}`;
+                document.getElementById('releveModalSubtitle').textContent = 'Chargement…';
+                document.getElementById('releveTableBody').innerHTML = '<tr><td colspan="8" class="loading">Chargement…</td></tr>';
+                document.getElementById('releveModal').classList.add('modal-open');
+                filterReleve('all');
+
+                const params = getPoisPeriodeParams();
+                const response = await fetch(`/api/boutiques/${boutiqueId}/releve?${params}`);
+                if (!response.ok) throw new Error('Erreur lors du chargement');
+                const data = await response.json();
+
+                currentReleveLignes = data.lignes || [];
+                const boutique = data.boutique || {};
+                document.getElementById('releveModalSubtitle').textContent =
+                    `${boutique.nom || codeBoutique} — ${formatPoisPeriodeLabel(data)}`;
+
+                const totaux = data.totaux || {};
+                document.getElementById('releveTotalAttendu').textContent = formatMontantFcfa(totaux.montant_attendu || 0);
+                document.getElementById('releveTotalRecouvre').textContent = formatMontantFcfa(totaux.montant_recouvre || 0);
+                document.getElementById('releveTotalARecouvrer').textContent = formatMontantFcfa(totaux.montant_a_recouvrer || 0);
+
+                renderReleveTable(currentReleveLignes);
+            } catch (error) {
+                closeReleveModal();
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        let currentReleveLignes = [];
+        let currentReleveFilter = 'all';
+
+        function getReleveEtatLabel(etat) {
+            const labels = {
+                recouvre: { text: '✅ Recouvré', cls: 'releve-etat-recouvre' },
+                non_recouvre: { text: '❌ Non recouvré', cls: 'releve-etat-non-recouvre' },
+                en_attente: { text: '⏳ En attente', cls: 'releve-etat-attente' },
+                partiel: { text: '⚠️ Partiel', cls: 'releve-etat-partiel' },
+            };
+            return labels[etat] || { text: etat, cls: '' };
+        }
+
+        function renderReleveTable(lignes) {
+            const tbody = document.getElementById('releveTableBody');
+            if (!lignes.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">Aucune échéance enregistrée pour ce POI.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = lignes.map(l => {
+                const etat = getReleveEtatLabel(l.etat);
+                let details = '—';
+                if (l.paiement) {
+                    const date = l.paiement.date_paiement
+                        ? new Date(l.paiement.date_paiement).toLocaleDateString('fr-FR')
+                        : '—';
+                    const ref = l.paiement.numero_transaction || l.paiement.reference_transaction || '';
+                    const methode = l.paiement.methode || '';
+                    details = `<small>${date}${methode ? ' · ' + methode : ''}${ref ? '<br>' + ref : ''}</small>`;
+                    if (l.paiement.id && l.etat === 'recouvre') {
+                        details += `<br><a href="/paiements/${l.paiement.id}/receipt" target="_blank" class="releve-receipt-link" title="Imprimer le reçu">🖨️ Reçu</a>`;
+                    }
+                }
+                return `
+                    <tr class="releve-row-${l.etat}">
+                        <td><strong>${l.periode_label}</strong></td>
+                        <td>${l.taxe_nom}<br><small>${l.taxe_code || ''}</small></td>
+                        <td>${l.institut_nom}</td>
+                        <td>${formatMontantFcfa(l.montant_attendu)}</td>
+                        <td class="${l.montant_recouvre > 0 ? 'montant-ok' : ''}">${formatMontantFcfa(l.montant_recouvre)}</td>
+                        <td class="${l.montant_restant > 0 ? 'montant-due' : 'montant-ok'}">${formatMontantFcfa(l.montant_restant)}</td>
+                        <td><span class="releve-etat ${etat.cls}">${etat.text}</span></td>
+                        <td>${details}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterReleve(filter) {
+            currentReleveFilter = filter;
+            document.querySelectorAll('.releve-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+            const filtered = filter === 'all'
+                ? currentReleveLignes
+                : currentReleveLignes.filter(l => l.etat === filter);
+            renderReleveTable(filtered);
+        }
+
+        function closeReleveModal() {
+            document.getElementById('releveModal').classList.remove('modal-open');
+            currentReleveLignes = [];
+            currentReleveFilter = 'all';
+        }
+
+        let lastCommercantAccess = null;
+
+        function showCommercantAccessModal(access) {
+            lastCommercantAccess = access;
+            const tel = access.telephone || access.identifiant_connexion || '—';
+            document.getElementById('caIdentifiant').textContent = tel;
+            document.getElementById('caCode').textContent = access.boutique_code || '—';
+            document.getElementById('caPassword').textContent = access.mot_de_passe_temporaire || '—';
+            const url = access.url_connexion || '/commercant/connexion';
+            const link = document.getElementById('caUrl');
+            link.href = url;
+            link.textContent = window.location.origin + url;
+            document.getElementById('commercantAccessModal').classList.add('modal-open');
+        }
+
+        function closeCommercantAccessModal() {
+            document.getElementById('commercantAccessModal').classList.remove('modal-open');
+        }
+
+        function copyCommercantAccess() {
+            if (!lastCommercantAccess) return;
+            const a = lastCommercantAccess;
+            const text = [
+                `GeoTax — Compte contribuable`,
+                `Commerce : ${a.boutique_nom || ''}`,
+                `Code POI : ${a.boutique_code || ''}`,
+                `Téléphone (connexion) : ${a.telephone || ''}`,
+                `Mot de passe provisoire : ${a.mot_de_passe_temporaire || ''}`,
+                `Connexion : ${window.location.origin}${a.url_connexion || '/commercant/connexion'}`,
+                `À changer à la première connexion.`,
+            ].join('\n');
+            navigator.clipboard.writeText(text).then(() => alert('Identifiants copiés dans le presse-papiers.'))
+                .catch(() => alert(text));
+        }
+
+        // Charger les taxes pour le formulaire
+        async function loadTaxesForForm() {
+            const container = document.getElementById('taxes-list');
+            if (!container) return;
+
+            try {
+                container.innerHTML = '<div class="loading">Chargement…</div>';
+                const response = await fetch('/api/taxes', { credentials: 'same-origin' });
+                let taxes;
+                try {
+                    taxes = await response.json();
+                } catch (_) {
+                    throw new Error('Réponse serveur illisible');
+                }
+                if (!response.ok) {
+                    throw new Error((taxes && taxes.error) || `Erreur ${response.status}`);
+                }
+                if (!Array.isArray(taxes)) {
+                    throw new Error('Format de réponse inattendu');
+                }
+
+                container.innerHTML = '';
+
+                if (taxes.length === 0) {
+                    container.innerHTML = '<div class="no-data">Aucune taxe configurée. Veuillez d\'abord créer des taxes dans le paramétrage.</div>';
+                    updateTaxesSummary();
+                    return;
+                }
+                
+                // Grouper par institution
+                const taxesParInstitut = {};
+                taxes.forEach(t => {
+                    const instCode = t.institut_code || t.institut_nom || 'AUTRE';
+                    if (!taxesParInstitut[instCode]) {
+                        taxesParInstitut[instCode] = {
+                            institut_nom: t.institut_nom || 'Autre',
+                            taxes: []
+                        };
+                    }
+                    taxesParInstitut[instCode].taxes.push(t);
+                });
+                
+                // Afficher par institution
+                for (const [code, groupe] of Object.entries(taxesParInstitut)) {
+                    const institutDiv = document.createElement('div');
+                    institutDiv.className = 'poi-taxes-institut';
+                    institutDiv.innerHTML = `<h4 class="poi-taxes-institut-title">${groupe.institut_nom}</h4>`;
+                    
+                    groupe.taxes.forEach(taxe => {
+                        const taxeDiv = document.createElement('div');
+                        taxeDiv.className = 'poi-taxe-row';
+                        taxeDiv.innerHTML = `
+                            <input type="checkbox" name="taxe" value="${taxe.id}" id="taxe-${taxe.id}" 
+                                   onchange="updateTaxesSummary()">
+                            <label for="taxe-${taxe.id}" class="poi-taxe-label">
+                                <strong>${taxe.nom}</strong> <span class="poi-taxe-code">${taxe.code}</span>
+                            </label>
+                            <div class="poi-taxe-montant">
+                                <input type="number" id="montant-taxe-${taxe.id}" 
+                                       value="${taxe.montant_attendu}" 
+                                       step="0.01" min="0" 
+                                       onchange="updateTaxesSummary()"
+                                       placeholder="${taxe.montant_attendu}">
+                                <span>FCFA</span>
+                            </div>
+                        `;
+                        institutDiv.appendChild(taxeDiv);
+                    });
+                    
+                    container.appendChild(institutDiv);
+                }
+                
+                updateTaxesSummary();
+            } catch (error) {
+                console.error('Erreur lors du chargement des taxes:', error);
+                if (container) {
+                    const detail = error && error.message ? ` (${error.message})` : '';
+                    container.innerHTML = `<div class="error">Erreur lors du chargement des taxes${detail}. <button type="button" class="btn btn-small btn-secondary" onclick="loadTaxesForForm()">Réessayer</button></div>`;
+                }
+                updateTaxesSummary();
+            }
+        }
+
+        // Mettre à jour le résumé des taxes
+        function updateTaxesSummary() {
+            let total = 0;
+            document.querySelectorAll('input[type="checkbox"][name="taxe"]:checked').forEach(checkbox => {
+                const taxeId = checkbox.value;
+                const montantInput = document.getElementById(`montant-taxe-${taxeId}`);
+                const montant = montantInput && montantInput.value ? parseFloat(montantInput.value) : 0;
+                total += montant;
+            });
+            
+            const totalElement = document.getElementById('total-taxes');
+            if (totalElement) {
+                totalElement.textContent = new Intl.NumberFormat('fr-FR').format(total);
+            }
+        }
+
+        // Charger les types de commerce pour le formulaire
+        async function loadTypesCommerceForSelect() {
+            try {
+                const response = await fetch('/api/types-commerce?include_champs=true');
+                const types = await response.json();
+                const select = document.getElementById('type_commerce_id');
+                if (!select) return;
+
+                typesCommerceById = {};
+                (types || []).forEach(t => { typesCommerceById[t.id] = t; });
+                
+                select.innerHTML = '<option value="">Sélectionner un type (optionnel)</option>';
+                types.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.id;
+                    option.textContent = `${t.nom} (${t.code})`;
+                    select.appendChild(option);
+                });
+
+                const techSelect = document.getElementById('techFilterType');
+                if (techSelect) {
+                    const current = techSelect.value;
+                    techSelect.innerHTML = '<option value="">— Choisir un type —</option>';
+                    types.forEach(t => {
+                        const option = document.createElement('option');
+                        option.value = t.id;
+                        option.textContent = `${t.nom} (${t.code})`;
+                        techSelect.appendChild(option);
+                    });
+                    if (current) techSelect.value = current;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des types de commerce:', error);
+            }
+        }
+
+        function openAddCommerceModal() {
+            const form = document.getElementById('boutiqueForm');
+            if (!form.dataset.editingId) {
+                PoiWizard.openShapePicker();
+                return;
+            }
+            applyPoiShapeUI('point', true);
+            document.getElementById('commerceModal').classList.add('modal-open');
+        }
+
+        function closeCommerceModal() {
+            document.getElementById('commerceModal').classList.remove('modal-open');
+            const form = document.getElementById('boutiqueForm');
+            delete form.dataset.editingId;
+            editingBoutiqueId = null;
+            form.reset();
+            clearAllAdminInputs();
+            buildTypeChampsPanel(null, []);
+            updateAdminCategoryUI();
+            switchPoiTab('administratif');
+            document.getElementById('poiGeometryJson').value = '';
+            document.getElementById('poiShape').value = 'point';
+            document.getElementById('poiCategorie').value = 'contribuable';
+            document.getElementById('poiShapeSummary').hidden = true;
+            applyPoiShapeUI('point', false);
+            PoiWizard.clearPending();
+            document.getElementById('formTitle').textContent = 'Ajouter un nouveau POI';
+            document.getElementById('submitBtn').textContent = '➕ Ajouter le POI';
+            const btnVal = document.getElementById('btnSubmitValidation');
+            if (btnVal) btnVal.hidden = true;
+        }
+
+        // Fermer les modals avec Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCommerceModal();
+                closeReleveModal();
+            }
+        });
+
+        // ——— Données techniques (tableau) ———
+        let techDataState = { columns: [], visibleColumns: new Set(), typeId: null };
+        let techSearchTimer = null;
+
+        function switchPoiView(view) {
+            const isListe = view === 'liste';
+            const isGeo = view === 'geo';
+            const isTechnique = view === 'technique';
+
+            document.getElementById('poiViewListe').hidden = !isListe;
+            document.getElementById('poiViewGeo').hidden = !isGeo;
+            document.getElementById('poiViewTechnique').hidden = !isTechnique;
+
+            document.getElementById('poiTabListe').classList.toggle('active', isListe);
+            document.getElementById('poiTabGeo').classList.toggle('active', isGeo);
+            document.getElementById('poiTabTechnique').classList.toggle('active', isTechnique);
+
+            if (isGeo) {
+                renderGeoFeatures(filterGeoPois(getGeoFeatureList()));
+            }
+            if (isTechnique && techDataState.typeId) {
+                loadDonneesTechniques(techDataState.page || 1);
+            }
+        }
+
+        function debouncedTechSearch() {
+            clearTimeout(techSearchTimer);
+            techSearchTimer = setTimeout(() => loadDonneesTechniques(1), 300);
+        }
+
+        function techColumnsStorageKey(typeId) {
+            return `poi-tech-columns-v1-${typeId}`;
+        }
+
+        function loadVisibleColumnsFromStorage(typeId, columns) {
+            try {
+                const raw = localStorage.getItem(techColumnsStorageKey(typeId));
+                if (raw) {
+                    const keys = JSON.parse(raw);
+                    if (Array.isArray(keys) && keys.length) return new Set(keys);
+                }
+            } catch (e) { /* ignore */ }
+            return new Set(columns.filter(c => c.default !== false || c.locked).map(c => c.key));
+        }
+
+        function saveVisibleColumnsToStorage(typeId, visibleSet) {
+            try {
+                localStorage.setItem(techColumnsStorageKey(typeId), JSON.stringify([...visibleSet]));
+            } catch (e) { /* ignore */ }
+        }
+
+        function renderTechColumnsPicker(columns, typeId) {
+            const picker = document.getElementById('techColumnsPicker');
+            if (!picker) return;
+            if (!columns.length) {
+                picker.innerHTML = '<p class="field-help">Sélectionnez d\'abord un type d\'activité.</p>';
+                return;
+            }
+            const groups = [
+                { id: 'base', label: 'Informations générales' },
+                { id: 'technique', label: 'Données techniques' },
+            ];
+            picker.innerHTML = groups.map(g => {
+                const cols = columns.filter(c => c.group === g.id);
+                if (!cols.length) return '';
+                return `
+                    <div class="tech-columns-group">
+                        <p class="tech-columns-group-title">${g.label}</p>
+                        ${cols.map(c => `
+                            <label class="tech-column-option">
+                                <input type="checkbox" data-col-key="${c.key}" ${techDataState.visibleColumns.has(c.key) ? 'checked' : ''}
+                                    ${c.locked ? 'checked disabled' : ''}
+                                    onchange="toggleTechColumn('${c.key}', this.checked)">
+                                ${c.label}
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleTechColumn(key, checked) {
+            if (checked) techDataState.visibleColumns.add(key);
+            else techDataState.visibleColumns.delete(key);
+            if (techDataState.typeId) {
+                saveVisibleColumnsToStorage(techDataState.typeId, techDataState.visibleColumns);
+            }
+            renderTechDataTable(techDataState.lastRows || [], techDataState.columns || []);
+        }
+
+        function resetTechColumns() {
+            if (!techDataState.columns.length || !techDataState.typeId) return;
+            techDataState.visibleColumns = new Set(
+                techDataState.columns.filter(c => c.default !== false || c.locked).map(c => c.key)
+            );
+            saveVisibleColumnsToStorage(techDataState.typeId, techDataState.visibleColumns);
+            renderTechColumnsPicker(techDataState.columns, techDataState.typeId);
+            renderTechDataTable(techDataState.lastRows || [], techDataState.columns);
+        }
+
+        function renderTechDataTable(rows, columns) {
+            const thead = document.getElementById('techDataThead');
+            const tbody = document.getElementById('techDataTbody');
+            const visible = columns.filter(c => techDataState.visibleColumns.has(c.key));
+            if (!visible.length) {
+                thead.innerHTML = '<tr><th>Aucune colonne sélectionnée</th></tr>';
+                tbody.innerHTML = '<tr><td class="no-data">Cochez au moins une colonne à afficher.</td></tr>';
+                return;
+            }
+            thead.innerHTML = `<tr>${visible.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="${visible.length}" class="no-data">Aucun POI trouvé pour ce filtre.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = rows.map(row => `
+                <tr>
+                    ${visible.map(c => `<td>${row[c.key] != null && row[c.key] !== '' ? row[c.key] : '—'}</td>`).join('')}
+                </tr>
+            `).join('');
+        }
+
+        function renderTechPagination(pagination) {
+            const container = document.getElementById('techDataPagination');
+            if (!container) return;
+            const { page, total_pages, total } = pagination;
+            if (!total_pages || total_pages <= 1) {
+                container.innerHTML = total ? `<span class="pagination-label">${total} POI</span>` : '';
+                return;
+            }
+            container.innerHTML = `
+                <button type="button" class="btn-small" ${page <= 1 ? 'disabled' : ''} onclick="loadDonneesTechniques(${page - 1})">← Précédent</button>
+                <span class="pagination-label">Page ${page} / ${total_pages} (${total} POI)</span>
+                <button type="button" class="btn-small" ${page >= total_pages ? 'disabled' : ''} onclick="loadDonneesTechniques(${page + 1})">Suivant →</button>
+            `;
+        }
+
+        async function loadDonneesTechniques(page) {
+            const typeId = document.getElementById('techFilterType')?.value;
+            const summary = document.getElementById('techDataSummary');
+            const tbody = document.getElementById('techDataTbody');
+            const thead = document.getElementById('techDataThead');
+
+            if (!typeId) {
+                techDataState = { columns: [], visibleColumns: new Set(), typeId: null };
+                if (summary) summary.textContent = '';
+                document.getElementById('techStatsPanel').hidden = true;
+                if (thead) thead.innerHTML = '<tr><th>Type d\'activité</th></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td class="no-data">Choisissez un type d\'activité pour afficher le tableau.</td></tr>';
+                document.getElementById('techDataPagination').innerHTML = '';
+                renderTechColumnsPicker([], null);
+                return;
+            }
+
+            const params = new URLSearchParams({
+                type_commerce_id: typeId,
+                page: page || 1,
+                per_page: document.getElementById('techPerPage')?.value || 20,
+            });
+            const q = (document.getElementById('techSearchInput')?.value || '').trim();
+            if (q) params.set('q', q);
+
+            if (tbody) tbody.innerHTML = `<tr><td colspan="20" class="loading">Chargement…</td></tr>`;
+
+            try {
+                const response = await fetch(`/api/pois/donnees-techniques?${params}`);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Erreur de chargement');
+
+                techDataState.typeId = typeId;
+                techDataState.page = data.pagination.page;
+                techDataState.columns = data.columns || [];
+                techDataState.lastRows = data.rows || [];
+                techDataState.visibleColumns = loadVisibleColumnsFromStorage(typeId, techDataState.columns);
+                techDataState.columns.filter(c => c.locked).forEach(c => techDataState.visibleColumns.add(c.key));
+
+                renderTechColumnsPicker(techDataState.columns, typeId);
+                renderTechDataTable(techDataState.lastRows, techDataState.columns);
+                renderTechPagination(data.pagination);
+                renderTechStats(data.stats, data.type_commerce_nom);
+
+                if (summary) {
+                    const techCount = techDataState.columns.filter(c => c.group === 'technique').length;
+                    const st = data.stats;
+                    summary.textContent = `${data.type_commerce_nom} — ${data.pagination.total} POI affichés — ${techCount} champ(s) technique(s)`
+                        + (st ? ` — complétude ${formatPercent(st.taux_completude_globale, 0)}` : '');
+                }
+            } catch (error) {
+                console.error(error);
+                if (tbody) tbody.innerHTML = `<tr><td colspan="20" class="error">${error.message}</td></tr>`;
+            }
+        }
+
+        function initPoisPeriodeSelects() {
+            const now = new Date();
+            document.getElementById('poisMoisDebut').value = now.getMonth() + 1;
+            document.getElementById('poisMoisFin').value = now.getMonth() + 1;
+            ['poisAnneeDebut', 'poisAnneeFin'].forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '';
+                for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = y;
+                    if (y === now.getFullYear()) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            });
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', async () => {
+            initPoisPeriodeSelects();
+            await loadPaysForForm(window.GeoTaxCountry?.getId?.());
+            if (document.getElementById('pays_id')?.value) {
+                await loadDepartements();
+            }
+            loadBoutiques();
+            loadTaxesForForm();
+            loadTypesCommerceForSelect();
+            if (window.GeoTaxCountry) {
+                GeoTaxCountry.onChange(async (paysId) => {
+                    loadBoutiques();
+                    const modal = document.getElementById('commerceModal');
+                    if (modal?.classList.contains('modal-open')) {
+                        await loadPaysForForm(paysId);
+                        await loadDepartements();
+                    }
+                });
+            }
+            const params = new URLSearchParams(window.location.search);
+            const pending = PoiWizard.getPending();
+            if (params.get('wizard') === '1' && pending?.step === 'characteristics') {
+                openPoiCharacteristicsForm(pending);
+            } else if (params.get('add') === '1') {
+                const lat = parseFloat(params.get('lat'));
+                const lng = parseFloat(params.get('lng'));
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    PoiWizard.savePending({
+                        shape: 'point',
+                        step: 'characteristics',
+                        geometry: { type: 'Point', coordinates: [lng, lat] },
+                    });
+                    openPoiCharacteristicsForm(PoiWizard.getPending());
+                } else {
+                    PoiWizard.openShapePicker();
+                }
+            } else if (params.get('edit_boutique')) {
+                editBoutique(parseInt(params.get('edit_boutique'), 10));
+                history.replaceState({}, '', '/pois');
+            }
+        });
+    </script>
+</body>
+</html>
+

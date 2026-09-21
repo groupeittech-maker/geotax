@@ -27,6 +27,10 @@ wheels/
 instance/
 .webassets-cache
 
+# Uploads utilisateur (production)
+static/uploads/poi/*
+!static/uploads/poi/.gitkeep
+
 # Base de données
 *.db
 *.sqlite
@@ -34,7 +38,13 @@ instance/
 
 # QR Codes générés
 qr_codes/
-*.png
+
+# Exports / dumps de base de données (ne jamais committer)
+*.dump
+deploy/hostinger/backup.sql
+
+# Fichiers temporaires
+_tmp_*
 
 # IDE
 .vscode/

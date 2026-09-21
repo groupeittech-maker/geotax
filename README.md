@@ -19,8 +19,34 @@ pip install -r requirements.txt
 
 ## Configuration
 
-1. Créer un fichier `.env` (optionnel) pour les configurations
-2. Lancer l'application : `python app.py`
+1. Copier `.env.example` vers `.env`
+2. Renseigner les variables dans `.env` :
+   - `DATABASE_URL` : PostgreSQL (**obligatoire**)
+   - `SECRET_KEY` : clé secrète Flask
+   - `GOOGLE_MAPS_API_KEY` : optionnel (carte Google Maps)
+3. Vérifier : `python deploy/verify_migration_status.py`
+4. Installer : `pip install -r requirements.txt`
+5. Lancer : `python app.py` (avec `DATABASE_URL` définie)
+
+### Production (VPS)
+
+**Docker + Hostinger (recommandé)** : **[DEPLOY_HOSTINGER.md](DEPLOY_HOSTINGER.md)**
+
+```bash
+sudo bash deploy/hostinger/install-docker.sh
+cp .env.docker.example .env
+sudo bash deploy/hostinger/deploy.sh
+```
+
+**Sans Docker** : **[DEPLOY.md](DEPLOY.md)**
+
+### Google Maps
+
+1. Créer un projet sur [Google Cloud Console](https://console.cloud.google.com/)
+2. Activer **Maps JavaScript API**
+3. Créer une clé API (Credentials → Create credentials → API key)
+4. Ajouter la clé dans `.env` : `GOOGLE_MAPS_API_KEY=votre_cle`
+5. Redémarrer l'application
 
 ## Structure du Projet
 
@@ -30,7 +56,9 @@ pip install -r requirements.txt
 - `static/` : Fichiers CSS, JS, images
 - `templates/` : Templates HTML
 - `qr_codes/` : QR codes générés pour les boutiques
-- `database.db` : Base de données SQLite
+- `DEPLOY.md` : index déploiement (PostgreSQL)
+- `DEPLOY_HOSTINGER.md` : Docker sur VPS Hostinger
+- PostgreSQL : base de données unique (voir `DATABASE_URL` dans `.env`)
 
 ## Utilisation
 

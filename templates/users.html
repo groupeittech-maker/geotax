@@ -4,16 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Utilisateurs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% include '_head.html' %}
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>👥 Gestion des Utilisateurs</h1>
-            {% include '_nav.html' %}
+        <header class="app-header">
+            {% include '_header_top.html' %}
         </header>
 
         <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Administration</p>
+                <h1 class="page-title">Utilisateurs</h1>
+                <p class="page-subtitle">Gestion des comptes et des rôles</p>
+            </div>
             <section>
                 <div class="section-header">
                     <h2>Liste des utilisateurs</h2>
@@ -35,6 +39,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="usersPagination" class="pagination-controls"></div>
             </section>
         </main>
     </div>
@@ -93,14 +98,33 @@
     </div>
 
     <script>
+        let allUsers = [];
+        let usersCurrentPage = 1;
+        const usersRowsPerPage = 8;
+
         async function loadUsers() {
             try {
                 const res = await fetch('/api/users');
                 const users = await res.json();
+                allUsers = Array.isArray(users) ? users : [];
                 const tbody = document.getElementById('usersTableBody');
+                const pager = document.getElementById('usersPagination');
                 tbody.innerHTML = '';
                 const roleLabels = { agent_terrain: 'Agent terrain', agent_financier: 'Agent financier', conseiller_municipal: 'Conseiller municipal', admin: 'Admin' };
-                users.forEach(u => {
+
+                if (allUsers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Aucun utilisateur trouvé</td></tr>';
+                    if (pager) pager.innerHTML = '';
+                    return;
+                }
+
+                const totalPages = Math.max(1, Math.ceil(allUsers.length / usersRowsPerPage));
+                if (usersCurrentPage > totalPages) usersCurrentPage = totalPages;
+                if (usersCurrentPage < 1) usersCurrentPage = 1;
+                const start = (usersCurrentPage - 1) * usersRowsPerPage;
+                const pageItems = allUsers.slice(start, start + usersRowsPerPage);
+
+                pageItems.forEach(u => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${u.username}</td>
@@ -113,9 +137,37 @@
                     `;
                     tbody.appendChild(row);
                 });
+
+                if (pager) {
+                    renderPagination(pager, usersCurrentPage, totalPages, (nextPage) => {
+                        usersCurrentPage = nextPage;
+                        loadUsers();
+                    });
+                }
             } catch (e) {
                 document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="5" class="error">Erreur</td></tr>';
+                document.getElementById('usersPagination').innerHTML = '';
             }
+        }
+
+        function renderPagination(container, currentPage, totalPages, onChange) {
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+            const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+            container.innerHTML = `
+                <button type="button" class="btn-small" data-page="prev" ${prevDisabled}>← Précédent</button>
+                <span class="pagination-label">Page ${currentPage} / ${totalPages}</span>
+                <button type="button" class="btn-small" data-page="next" ${nextDisabled}>Suivant →</button>
+            `;
+            container.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
+                if (currentPage > 1) onChange(currentPage - 1);
+            });
+            container.querySelector('[data-page="next"]')?.addEventListener('click', () => {
+                if (currentPage < totalPages) onChange(currentPage + 1);
+            });
         }
 
         function openUserModal() {

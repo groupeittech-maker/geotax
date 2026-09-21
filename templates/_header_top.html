@@ -1,0 +1,28 @@
+<div class="app-header-bar">
+    <div class="app-header-start">
+        <a href="{{ home_url }}" class="app-brand" title="GeoTax — Accueil">
+            <span class="app-brand-mark">GT</span>
+            <span class="app-brand-text">GeoTax</span>
+        </a>
+        {% if current_user_role %}
+        <span class="app-user-role" title="Rôle connecté">{{ current_user_role_label or current_user_role }}</span>
+        <label class="app-pays-select-wrap" title="Filtrer par pays">
+            <span class="app-pays-select-label">Pays</span>
+            <select id="globalPaysSelect" class="app-pays-select" aria-label="Pays actif">
+                <option value="">Chargement…</option>
+            </select>
+        </label>
+        {% endif %}
+    </div>
+    <div class="app-nav-wrap">
+        {% include '_nav.html' %}
+    </div>
+    <a href="{{ url_for('logout_page') }}" class="nav-logout" title="Se déconnecter">
+        <svg class="nav-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="nav-logout-label">Déconnexion</span>
+    </a>
+</div>

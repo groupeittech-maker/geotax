@@ -1,0 +1,5 @@
+# Scripts shell : toujours LF (évite "invalid option name pipefail" sur Linux)
+*.sh text eol=lf
+deploy/** text eol=lf
+Dockerfile text eol=lf
+docker-compose*.yml text eol=lf

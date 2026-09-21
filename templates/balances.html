@@ -4,46 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Balances Financières</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% include '_head.html' %}
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>💰 Balances Financières</h1>
-            {% include '_nav.html' %}
+        <header class="app-header">
+            {% include '_header_top.html' %}
         </header>
 
         <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Finances</p>
+                <h1 class="page-title">Balances financières</h1>
+                <p class="page-subtitle">Répartition des recettes par institution et période</p>
+            </div>
             <div class="balances-period-selector">
-                <label>Période :</label>
-                <select id="periodeMois" onchange="loadBalances()">
+                <label>Période du</label>
+                <select id="periodeMoisDebut" onchange="loadBalances()">
                     <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
                     <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
                     <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
                     <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
                 </select>
-                <select id="periodeAnnee" onchange="loadBalances()"></select>
+                <select id="periodeAnneeDebut" onchange="loadBalances()"></select>
+                <label>au</label>
+                <select id="periodeMoisFin" onchange="loadBalances()">
+                    <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+                    <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+                    <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+                    <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                </select>
+                <select id="periodeAnneeFin" onchange="loadBalances()"></select>
+                <span class="balances-filter-separator"></span>
+                <label for="filterTaxe">Type de taxe</label>
+                <select id="filterTaxe" onchange="loadBalances()">
+                    <option value="">Toutes les taxes</option>
+                </select>
+                <button type="button" class="btn btn-secondary btn-small" id="resetBalanceFilters" onclick="resetBalanceFilters()" style="display:none;">Réinitialiser</button>
             </div>
+            <div id="balanceFilterBanner" class="balance-filter-banner" style="display:none;"></div>
 
-            <section class="balance-section">
-                <h2>1. Balance par taxe</h2>
-                <p class="section-desc">Montants recouvrés par type de taxe pour la période sélectionnée.</p>
-                <div class="balance-taxes-grid" id="balanceTaxesGrid">
-                    <div class="loading">Chargement...</div>
-                </div>
-                <div class="balance-total">
-                    <strong>Total recouvré :</strong> <span id="totalParTaxes">0</span> FCFA
+            <section class="stats-section balance-summary-section">
+                <p class="section-desc" id="balancePeriodLabel"></p>
+                <div class="balance-summary-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="balanceTotalAttendu">-</div>
+                        <div class="stat-label">Montant attendu (FCFA)</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-value" id="balanceTotalRecouvre">-</div>
+                        <div class="stat-label">Total recouvré (FCFA)</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-value" id="balanceTotalNonRecouvre">-</div>
+                        <div class="stat-label">Non recouvré (FCFA)</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-value" id="balanceTauxGlobal">-</div>
+                        <div class="stat-label">Taux de recouvrement</div>
+                    </div>
                 </div>
             </section>
 
             <section class="balance-section">
-                <h2>2. Répartition par partenaire</h2>
-                <p class="section-desc">Répartition du montant total recouvré entre les partenaires (pourcentages configurables dans Paramétrage).</p>
+                <h2>1. Balance par taxe</h2>
+                <p class="section-desc">Montants attendus et recouvrés par type de taxe (taxes assignées aux POI, périodicité respectée).</p>
+                <div class="balance-taxes-grid" id="balanceTaxesGrid">
+                    <div class="loading">Chargement...</div>
+                </div>
+                <div class="balance-total balance-total-row">
+                    <span><strong>Attendu :</strong> <span id="totalAttenduParTaxes">0</span> FCFA</span>
+                    <span class="status-success"><strong>Recouvré :</strong> <span id="totalParTaxes">0</span> FCFA</span>
+                    <span class="status-warning"><strong>Non recouvré :</strong> <span id="totalNonRecouvreParTaxes">0</span> FCFA</span>
+                </div>
+            </section>
+
+            <section class="balance-section">
+                <h2>2. Balance par institution</h2>
+                <p class="section-desc">Synthèse par institution partenaire pour la période sélectionnée.</p>
+                <div class="table-container">
+                    <table class="balance-instituts-table">
+                        <thead>
+                            <tr>
+                                <th>Institution</th>
+                                <th>Code</th>
+                                <th class="num">Attendu</th>
+                                <th class="num">Recouvré</th>
+                                <th class="num">Non recouvré</th>
+                                <th class="num">Taux</th>
+                                <th class="num">POI concernés</th>
+                                <th class="num">POI à jour</th>
+                                <th class="num">POI hors délai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balanceInstitutsBody">
+                            <tr><td colspan="9" class="loading">Chargement...</td></tr>
+                        </tbody>
+                        <tfoot id="balanceInstitutsFoot"></tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <section class="balance-section">
+                <h2>3. Répartition par partenaire</h2>
+                <p class="section-desc">Quote-part du <strong>montant recouvré</strong> sur la période (taxes assignées aux POI). Pourcentages modifiables dans <a href="/parametrage">Paramétrage → Répartition</a>.</p>
+                <p class="section-desc repartition-period" id="repartitionPeriodLabel"></p>
+                <div id="repartitionPctWarning" class="repartition-pct-warning" style="display:none;"></div>
                 <div class="repartition-grid" id="repartitionGrid">
                     <div class="loading">Chargement...</div>
                 </div>
-                <div class="balance-total">
-                    <strong>Total recouvré :</strong> <span id="totalRepartition">0</span> FCFA
+                <div class="balance-total balance-total-row repartition-footer">
+                    <span><strong>Base recouvrée :</strong> <span id="totalRepartition">0</span> FCFA</span>
+                    <span class="text-muted"><strong>Attendu période :</strong> <span id="repartitionAttendu">0</span> FCFA</span>
+                    <span class="text-muted"><strong>Total parts :</strong> <span id="repartitionPctTotal">—</span></span>
                 </div>
             </section>
         </main>
@@ -53,84 +126,303 @@
         const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
-        async function loadBalances() {
-            const mois = document.getElementById('periodeMois').value;
-            const annee = document.getElementById('periodeAnnee').value;
-            
-            await Promise.all([loadBalanceParTaxes(mois, annee), loadBalanceRepartition(mois, annee)]);
+        function getPeriodeParams() {
+            const params = new URLSearchParams({
+                mois_debut: document.getElementById('periodeMoisDebut').value,
+                annee_debut: document.getElementById('periodeAnneeDebut').value,
+                mois_fin: document.getElementById('periodeMoisFin').value,
+                annee_fin: document.getElementById('periodeAnneeFin').value,
+            });
+            const taxeId = document.getElementById('filterTaxe').value;
+            if (taxeId) params.set('taxe_id', taxeId);
+            return params;
         }
 
-        async function loadBalanceParTaxes(mois, annee) {
+        function updateFilterBanner() {
+            const taxeSelect = document.getElementById('filterTaxe');
+            const banner = document.getElementById('balanceFilterBanner');
+            const resetBtn = document.getElementById('resetBalanceFilters');
+            const selectedOption = taxeSelect.options[taxeSelect.selectedIndex];
+            const hasFilter = !!taxeSelect.value;
+
+            resetBtn.style.display = hasFilter ? 'inline-flex' : 'none';
+
+            if (hasFilter) {
+                banner.style.display = 'block';
+                banner.innerHTML = `<span class="balance-filter-badge">Filtre actif</span> Affichage limité à la taxe <strong>${selectedOption.textContent}</strong>`;
+            } else {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+            }
+        }
+
+        function resetBalanceFilters() {
+            document.getElementById('filterTaxe').value = '';
+            loadBalances();
+        }
+
+        async function loadTaxesForBalanceFilter() {
             try {
-                const response = await fetch(`/api/balance-par-taxes?mois=${mois}&annee=${annee}`);
+                const response = await fetch('/api/taxes');
+                const taxes = await response.json();
+                const filterTaxe = document.getElementById('filterTaxe');
+                const currentValue = filterTaxe.value;
+                filterTaxe.innerHTML = '<option value="">Toutes les taxes</option>';
+                (Array.isArray(taxes) ? taxes : []).filter(t => t.active).forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.id;
+                    option.textContent = `${t.nom} (${t.institut_nom || '—'})`;
+                    filterTaxe.appendChild(option);
+                });
+                if (currentValue) filterTaxe.value = currentValue;
+            } catch (e) {
+                console.error('Erreur chargement taxes:', e);
+            }
+        }
+
+        function formatPeriodeLabel(data) {
+            const sameMonth = data.mois_debut === data.mois_fin && data.annee_debut === data.annee_fin;
+            if (sameMonth) {
+                return `${moisNoms[data.mois_fin - 1]} ${data.annee_fin}`;
+            }
+            return `${moisNoms[data.mois_debut - 1]} ${data.annee_debut} — ${moisNoms[data.mois_fin - 1]} ${data.annee_fin}`;
+        }
+
+        function formatFcfa(value) {
+            return new Intl.NumberFormat('fr-FR').format(value || 0) + ' FCFA';
+        }
+
+        function tauxClass(taux) {
+            if (taux >= 80) return 'status-success';
+            if (taux >= 50) return 'status-warning';
+            return 'status-warning';
+        }
+
+        function updateBalanceSummary(data) {
+            document.getElementById('balancePeriodLabel').textContent =
+                `Période : ${formatPeriodeLabel(data)}`;
+            document.getElementById('balanceTotalAttendu').textContent =
+                new Intl.NumberFormat('fr-FR').format(data.total_attendu || 0);
+            document.getElementById('balanceTotalRecouvre').textContent =
+                new Intl.NumberFormat('fr-FR').format(data.total_recouvre || 0);
+            document.getElementById('balanceTotalNonRecouvre').textContent =
+                new Intl.NumberFormat('fr-FR').format(data.total_non_recouvre || 0);
+            const taux = (data.total_attendu || 0) > 0
+                ? Math.round((data.total_recouvre / data.total_attendu) * 100)
+                : 0;
+            document.getElementById('balanceTauxGlobal').textContent = taux + '%';
+        }
+
+        async function loadBalances() {
+            updateFilterBanner();
+            const params = getPeriodeParams();
+            await Promise.all([
+                loadBalanceParTaxes(params),
+                loadBalanceParInstituts(params),
+                loadBalanceRepartition(params),
+            ]);
+        }
+
+        function renderTaxCard(t, totalRecouvre, isFiltered) {
+            const pct = totalRecouvre > 0 ? Math.round((t.montant_recouvre / totalRecouvre) * 100) : 0;
+            const taux = (t.montant_attendu || 0) > 0
+                ? (t.taux_recouvrement ?? Math.round((t.montant_recouvre / t.montant_attendu) * 100))
+                : 0;
+            return `
+                <div class="balance-tax-card${isFiltered ? ' is-filtered' : ''}">
+                    <div class="balance-tax-icon">📋</div>
+                    <div class="balance-tax-nom">${t.taxe_nom}</div>
+                    <div class="balance-tax-code">${t.taxe_code}</div>
+                    <div class="balance-tax-institut">${t.institut_nom || '—'}</div>
+                    <div class="balance-tax-poi">${t.poi_concernes || 0} POI · ${t.nombre_paiements} paiement(s)</div>
+                    <div class="balance-tax-amounts">
+                        <div class="balance-tax-amount">
+                            <span class="balance-tax-amount-label">Attendu</span>
+                            <span class="balance-tax-amount-value">${formatFcfa(t.montant_attendu)}</span>
+                        </div>
+                        <div class="balance-tax-amount success">
+                            <span class="balance-tax-amount-label">Recouvré</span>
+                            <span class="balance-tax-amount-value">${formatFcfa(t.montant_recouvre)}</span>
+                        </div>
+                        <div class="balance-tax-amount warning">
+                            <span class="balance-tax-amount-label">Non recouvré</span>
+                            <span class="balance-tax-amount-value">${formatFcfa(t.montant_non_recouvre)}</span>
+                        </div>
+                    </div>
+                    ${!isFiltered && totalRecouvre > 0 ? `
+                        <div class="balance-tax-bar">
+                            <div class="balance-tax-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="balance-tax-pct">${pct}% du recouvrement total · ${taux.toFixed(1)}% recouvré</div>
+                    ` : `<div class="balance-tax-pct">${taux.toFixed(1)}% recouvré</div>`}
+                </div>
+            `;
+        }
+
+        async function loadBalanceParTaxes(params) {
+            try {
+                const response = await fetch(`/api/balance-par-taxes?${params}`);
                 const data = await response.json();
                 
                 const grid = document.getElementById('balanceTaxesGrid');
                 
                 if (data.balance_par_taxe && data.balance_par_taxe.length > 0) {
-                    grid.innerHTML = data.balance_par_taxe.map(t => `
-                        <div class="balance-tax-card">
-                            <div class="balance-tax-icon">📋</div>
-                            <div class="balance-tax-nom">${t.taxe_nom}</div>
-                            <div class="balance-tax-code">${t.taxe_code}</div>
-                            <div class="balance-tax-institut">${t.institut_nom || '-'}</div>
-                            <div class="balance-tax-paiements">${t.nombre_paiements} paiement(s)</div>
-                            <div class="balance-tax-montant">${new Intl.NumberFormat('fr-FR').format(t.montant_recouvre)} FCFA</div>
-                        </div>
-                    `).join('');
-                    document.getElementById('totalParTaxes').textContent = new Intl.NumberFormat('fr-FR').format(data.total_recouvre);
+                    const isFiltered = !!document.getElementById('filterTaxe').value;
+                    grid.innerHTML = data.balance_par_taxe.map(t =>
+                        renderTaxCard(t, data.total_recouvre, isFiltered)
+                    ).join('');
+                    updateBalanceSummary(data);
+                    document.getElementById('totalAttenduParTaxes').textContent =
+                        new Intl.NumberFormat('fr-FR').format(data.total_attendu || 0);
+                    document.getElementById('totalParTaxes').textContent =
+                        new Intl.NumberFormat('fr-FR').format(data.total_recouvre || 0);
+                    document.getElementById('totalNonRecouvreParTaxes').textContent =
+                        new Intl.NumberFormat('fr-FR').format(data.total_non_recouvre || 0);
                 } else {
-                    grid.innerHTML = '<div class="no-data">Aucune donnée pour cette période</div>';
+                    const taxeLabel = document.getElementById('filterTaxe').selectedOptions[0]?.textContent;
+                    const filterMsg = document.getElementById('filterTaxe').value
+                        ? ` pour la taxe « ${taxeLabel} »`
+                        : '';
+                    grid.innerHTML = `<div class="no-data">Aucune donnée${filterMsg} pour ${formatPeriodeLabel(data)}</div>`;
+                    updateBalanceSummary({ ...data, total_attendu: 0, total_recouvre: 0, total_non_recouvre: 0 });
+                    document.getElementById('totalAttenduParTaxes').textContent = '0';
                     document.getElementById('totalParTaxes').textContent = '0';
+                    document.getElementById('totalNonRecouvreParTaxes').textContent = '0';
                 }
             } catch (e) {
                 document.getElementById('balanceTaxesGrid').innerHTML = '<div class="error">Erreur de chargement</div>';
             }
         }
 
-        async function loadBalanceRepartition(mois, annee) {
+        async function loadBalanceParInstituts(params) {
             try {
-                const response = await fetch(`/api/balance-repartition?mois=${mois}&annee=${annee}`);
+                const response = await fetch(`/api/balance-instituts?${params}`);
                 const data = await response.json();
-                
+                const tbody = document.getElementById('balanceInstitutsBody');
+                const tfoot = document.getElementById('balanceInstitutsFoot');
+
+                const rows = (data.balance_par_institut || []).filter(b => b.montant_attendu > 0);
+                if (rows.length > 0) {
+                    tbody.innerHTML = rows.map(balance => {
+                        const taux = balance.taux_recouvrement.toFixed(1);
+                        return `
+                            <tr>
+                                <td><strong>${balance.institut_nom}</strong></td>
+                                <td><span class="balance-code-pill">${balance.institut_code}</span></td>
+                                <td class="num">${formatFcfa(balance.montant_attendu)}</td>
+                                <td class="num status-success">${formatFcfa(balance.montant_recouvre)}</td>
+                                <td class="num status-warning">${formatFcfa(balance.montant_non_recouvre)}</td>
+                                <td class="num ${tauxClass(balance.taux_recouvrement)}">${taux}%</td>
+                                <td class="num">${balance.commerces_actifs}</td>
+                                <td class="num status-success">${balance.commerces_a_jour ?? balance.commerces_ayant_paye}</td>
+                                <td class="num status-warning">${balance.commerces_non_a_jour ?? balance.commerces_n_ayant_pas_paye}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    const tauxGlobal = data.total_attendu > 0
+                        ? Math.round((data.total_recouvre / data.total_attendu) * 100)
+                        : 0;
+                    tfoot.innerHTML = `
+                        <tr class="balance-table-total">
+                            <td colspan="2"><strong>Total (${formatPeriodeLabel(data)})</strong></td>
+                            <td class="num"><strong>${formatFcfa(data.total_attendu)}</strong></td>
+                            <td class="num status-success"><strong>${formatFcfa(data.total_recouvre)}</strong></td>
+                            <td class="num status-warning"><strong>${formatFcfa(data.total_non_recouvre)}</strong></td>
+                            <td class="num"><strong>${tauxGlobal}%</strong></td>
+                            <td colspan="3"></td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="9" class="no-data">Aucune donnée pour ${formatPeriodeLabel(data)}</td></tr>`;
+                    tfoot.innerHTML = '';
+                }
+            } catch (e) {
+                document.getElementById('balanceInstitutsBody').innerHTML =
+                    '<tr><td colspan="9" class="error">Erreur de chargement</td></tr>';
+                document.getElementById('balanceInstitutsFoot').innerHTML = '';
+            }
+        }
+
+        async function loadBalanceRepartition(params) {
+            try {
+                const response = await fetch(`/api/balance-repartition?${params}`);
+                const data = await response.json();
+
                 const grid = document.getElementById('repartitionGrid');
                 const rep = data.repartition || {};
-                
+                const totalRecouvre = data.total_recouvre || 0;
+
+                document.getElementById('repartitionPeriodLabel').textContent =
+                    `Période : ${formatPeriodeLabel(data)}`;
+
+                const pctWarning = document.getElementById('repartitionPctWarning');
+                if (data.pct_valid === false) {
+                    pctWarning.style.display = 'block';
+                    pctWarning.innerHTML = `⚠️ Les pourcentages configurés totalisent <strong>${data.pct_total}%</strong> (attendu 100%). Ajustez-les dans Paramétrage.`;
+                } else {
+                    pctWarning.style.display = 'none';
+                    pctWarning.innerHTML = '';
+                }
+
                 const partenaires = [
-                    { key: 'institution', label: 'Institution', icon: '🏛️' },
-                    { key: 'partenaire_technique', label: 'Partenaire technique', icon: '🔧' },
-                    { key: 'mtn', label: 'MTN', icon: '📱' }
+                    { key: 'institution', icon: '🏛️', color: '#0d9668' },
+                    { key: 'partenaire_technique', icon: '🔧', color: '#1565c0' },
+                    { key: 'mtn', icon: '📱', color: '#6a1b9a' },
                 ];
-                
-                grid.innerHTML = partenaires.map(p => {
-                    const r = rep[p.key] || { pourcentage: 0, montant: 0 };
-                    return `
-                        <div class="repartition-card">
-                            <div class="repartition-icon">${p.icon}</div>
-                            <div class="repartition-label">${p.label}</div>
-                            <div class="repartition-pct">${r.pourcentage}%</div>
-                            <div class="repartition-montant">${new Intl.NumberFormat('fr-FR').format(r.montant)} FCFA</div>
-                        </div>
-                    `;
-                }).join('');
-                
-                document.getElementById('totalRepartition').textContent = new Intl.NumberFormat('fr-FR').format(data.total_recouvre || 0);
+
+                if (totalRecouvre <= 0) {
+                    grid.innerHTML = `<div class="no-data">Aucun montant recouvré${document.getElementById('filterTaxe').value ? ' pour la taxe filtrée' : ''} sur ${formatPeriodeLabel(data)} — répartition affichée à 0 FCFA.</div>`;
+                } else {
+                    grid.innerHTML = partenaires.map(p => {
+                        const r = rep[p.key] || { label: p.key, pourcentage: 0, montant: 0, part_du_recouvrement: 0 };
+                        const barPct = r.part_du_recouvrement || r.pourcentage || 0;
+                        return `
+                            <div class="repartition-card">
+                                <div class="repartition-icon">${p.icon}</div>
+                                <div class="repartition-label">${r.label}</div>
+                                <div class="repartition-pct">${r.pourcentage}%</div>
+                                <div class="repartition-bar">
+                                    <div class="repartition-bar-fill" style="width:${barPct}%;background:${p.color}"></div>
+                                </div>
+                                <div class="repartition-montant">${formatFcfa(r.montant)}</div>
+                                <div class="repartition-share">${barPct}% du recouvrement</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                document.getElementById('totalRepartition').textContent =
+                    new Intl.NumberFormat('fr-FR').format(totalRecouvre);
+                document.getElementById('repartitionAttendu').textContent =
+                    new Intl.NumberFormat('fr-FR').format(data.total_attendu || 0);
+                document.getElementById('repartitionPctTotal').textContent =
+                    data.pct_total != null ? `${data.pct_total}%` : '—';
             } catch (e) {
                 document.getElementById('repartitionGrid').innerHTML = '<div class="error">Erreur de chargement</div>';
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function fillAnneeSelect(selectId, selectedYear) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '';
             const now = new Date();
-            document.getElementById('periodeMois').value = now.getMonth() + 1;
-            const anneeSelect = document.getElementById('periodeAnnee');
-            for (let y = now.getFullYear(); y >= now.getFullYear() - 2; y--) {
+            for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
                 const opt = document.createElement('option');
                 opt.value = y;
                 opt.textContent = y;
-                if (y === now.getFullYear()) opt.selected = true;
-                anneeSelect.appendChild(opt);
+                if (y === selectedYear) opt.selected = true;
+                select.appendChild(opt);
             }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const now = new Date();
+            document.getElementById('periodeMoisDebut').value = now.getMonth() + 1;
+            document.getElementById('periodeMoisFin').value = now.getMonth() + 1;
+            fillAnneeSelect('periodeAnneeDebut', now.getFullYear());
+            fillAnneeSelect('periodeAnneeFin', now.getFullYear());
+            await loadTaxesForBalanceFilter();
             loadBalances();
         });
     </script>

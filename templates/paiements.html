@@ -4,16 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Paiements</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% include '_head.html' %}
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>💰 Gestion des Paiements</h1>
-            {% include '_nav.html' %}
+        <header class="app-header">
+            {% include '_header_top.html' %}
         </header>
 
         <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Finances</p>
+                <h1 class="page-title">Paiements</h1>
+                <p class="page-subtitle">Suivi et encaissement des paiements fiscaux</p>
+            </div>
             <section class="boutiques-list-section">
                 <div class="section-header">
                     <h2>📋 Gestion des Paiements</h2>
@@ -43,7 +47,7 @@
 
                 <!-- Barre de recherche -->
                 <div class="search-bar">
-                    <input type="text" id="searchPaiement" placeholder="Rechercher par commerce, institution, taxe..." 
+                    <input type="text" id="searchPaiement" placeholder="Rechercher par POI, institution, taxe…" 
                            oninput="debouncedSearch()" class="search-input">
                     <span id="searchCount" class="search-count"></span>
                 </div>
@@ -54,9 +58,9 @@
                         <summary style="cursor: pointer; font-weight: 600; padding: 8px 0;">🔍 Filtres avancés</summary>
                         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 15px;">
                             <div class="form-group">
-                                <label for="filterCommerce">Commerce:</label>
+                                <label for="filterCommerce">POI :</label>
                                 <select id="filterCommerce" onchange="loadPaiements()">
-                                    <option value="">Tous les commerces</option>
+                                    <option value="">Tous les POI</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -122,7 +126,7 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Commerce</th>
+                                <th>POI</th>
                                 <th>Institution</th>
                                 <th>Taxe</th>
                                 <th>Montant</th>
@@ -137,6 +141,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paiementsPagination" class="pagination-controls"></div>
             </section>
         </main>
     </div>
@@ -152,9 +157,9 @@
             <form id="paiementForm" class="boutique-form" onsubmit="savePaiement(event)">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="paiementCommerce">Commerce *:</label>
+                        <label for="paiementCommerce">POI * :</label>
                         <select id="paiementCommerce" required>
-                            <option value="">Sélectionner un commerce</option>
+                            <option value="">Sélectionner un POI</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -276,11 +281,14 @@
         let editingPaiementId = null;
         let allPaiements = [];
         let currentTab = 'en_attente';
+        let paiementsCurrentPage = 1;
+        const paiementsRowsPerPage = 8;
         const currentYear = new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
 
         function switchTab(tab) {
             currentTab = tab;
+            paiementsCurrentPage = 1;
             document.getElementById('tabEnAttente').classList.toggle('active', tab === 'en_attente');
             document.getElementById('tabTous').classList.toggle('active', tab === 'tous');
             document.getElementById('statsEnAttente').style.display = tab === 'en_attente' ? 'block' : 'none';
@@ -307,16 +315,17 @@
             try {
                 const response = await fetch('/api/boutiques');
                 const commerces = await response.json();
+                const list = Array.isArray(commerces) ? commerces : (commerces.boutiques || []);
                 
                 const selectCommerce = document.getElementById('paiementCommerce');
                 const filterCommerce = document.getElementById('filterCommerce');
                 
                 [selectCommerce, filterCommerce].forEach(select => {
                     select.innerHTML = select === selectCommerce 
-                        ? '<option value="">Sélectionner un commerce</option>'
-                        : '<option value="">Tous les commerces</option>';
+                        ? '<option value="">Sélectionner un POI</option>'
+                        : '<option value="">Tous les POI</option>';
                     
-                    (Array.isArray(commerces) ? commerces : []).forEach(c => {
+                    list.forEach(c => {
                         const option = document.createElement('option');
                         option.value = c.id;
                         option.textContent = `${c.code_unique} - ${c.nom}`;
@@ -415,6 +424,7 @@
                     const response = await fetch(`/api/taxes-non-payees?${params.toString()}`);
                     if (!response.ok) throw new Error('Erreur lors du chargement');
                     allPaiements = await response.json();
+                    paiementsCurrentPage = 1;
                     displayTaxesNonPayees(allPaiements);
                 } else {
                     const params = new URLSearchParams();
@@ -436,6 +446,7 @@
                     const response = await fetch(`/api/paiements?${params.toString()}`);
                     if (!response.ok) throw new Error('Erreur lors du chargement');
                     allPaiements = await response.json();
+                    paiementsCurrentPage = 1;
                     displayPaiements(allPaiements);
                 }
             } catch (error) {
@@ -443,6 +454,7 @@
                 allPaiements = [];
                 document.getElementById('paiementsTableBody').innerHTML = 
                     `<tr><td colspan="9" class="error">Erreur: ${error.message}</td></tr>`;
+                document.getElementById('paiementsPagination').innerHTML = '';
                 document.getElementById('searchCount').textContent = '';
             }
         }
@@ -459,8 +471,9 @@
         // Afficher les taxes non payées (onglet en attente)
         function displayTaxesNonPayees(items) {
             const tbody = document.getElementById('paiementsTableBody');
+            const pager = document.getElementById('paiementsPagination');
             const thead = document.querySelector('#paiementsTable thead tr');
-            thead.innerHTML = '<th>Commerce</th><th>Institution</th><th>Taxe</th><th>Montant dû</th><th>Période</th><th>Statut</th><th>Actions</th>';
+            thead.innerHTML = '<th>POI</th><th>Institution</th><th>Taxe</th><th>Montant dû</th><th>Période</th><th>Statut</th><th>Actions</th>';
             const countEl = document.getElementById('searchCount');
             if (items.length > 0) {
                 countEl.textContent = `${items.length} taxe(s) non payée(s)`;
@@ -468,9 +481,17 @@
             document.getElementById('totalEnAttenteTab').textContent = items.length;
             if (items.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="no-data">Aucune taxe non payée pour cette période</td></tr>';
+                if (pager) pager.innerHTML = '';
                 return;
             }
-            tbody.innerHTML = items.map((item) => {
+
+            const totalPages = Math.max(1, Math.ceil(items.length / paiementsRowsPerPage));
+            if (paiementsCurrentPage > totalPages) paiementsCurrentPage = totalPages;
+            if (paiementsCurrentPage < 1) paiementsCurrentPage = 1;
+            const start = (paiementsCurrentPage - 1) * paiementsRowsPerPage;
+            const pageItems = items.slice(start, start + paiementsRowsPerPage);
+
+            tbody.innerHTML = pageItems.map((item) => {
                 const periode = `${moisNoms[item.mois - 1]} ${item.annee}`;
                 const dataB64 = btoa(unescape(encodeURIComponent(JSON.stringify(item))));
                 return `
@@ -487,13 +508,21 @@
                     </tr>
                 `;
             }).join('');
+
+            if (pager) {
+                renderPagination(pager, paiementsCurrentPage, totalPages, (nextPage) => {
+                    paiementsCurrentPage = nextPage;
+                    displayTaxesNonPayees(items);
+                });
+            }
         }
 
         // Afficher les paiements
         function displayPaiements(paiements) {
             const thead = document.querySelector('#paiementsTable thead tr');
-            thead.innerHTML = '<th>Date</th><th>N° Transaction</th><th>Commerce</th><th>Institution</th><th>Taxe</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Actions</th>';
+            thead.innerHTML = '<th>Date</th><th>N° Transaction</th><th>POI</th><th>Institution</th><th>Taxe</th><th>Montant</th><th>Méthode</th><th>Statut</th><th>Actions</th>';
             const tbody = document.getElementById('paiementsTableBody');
+            const pager = document.getElementById('paiementsPagination');
             const total = allPaiements.length;
             const countEl = document.getElementById('searchCount');
             
@@ -514,16 +543,26 @@
                 document.getElementById('totalEncaisses').textContent = '0';
                 document.getElementById('totalEnAttente').textContent = '0';
                 document.getElementById('totalAnnules').textContent = '0';
+                if (pager) pager.innerHTML = '';
                 return;
             }
-            
+
+            const totalPages = Math.max(1, Math.ceil(paiements.length / paiementsRowsPerPage));
+            if (paiementsCurrentPage > totalPages) paiementsCurrentPage = totalPages;
+            if (paiementsCurrentPage < 1) paiementsCurrentPage = 1;
+            const start = (paiementsCurrentPage - 1) * paiementsRowsPerPage;
+            const pageItems = paiements.slice(start, start + paiementsRowsPerPage);
+
             let totalMontant = 0, totalEncaisses = 0, totalEnAttente = 0, totalAnnules = 0;
-            tbody.innerHTML = paiements.map(p => {
+            paiements.forEach(p => {
                 if (p.statut === 'confirme') {
                     totalMontant += p.montant;
                     totalEncaisses++;
                 } else if (p.statut === 'en_attente') totalEnAttente++;
                 else totalAnnules++;
+            });
+
+            tbody.innerHTML = pageItems.map(p => {
                 const date = p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR') : 'N/A';
                 const statutClass = p.statut === 'confirme' ? 'success' : p.statut === 'en_attente' ? 'warning' : 'error';
                 const statutText = p.statut === 'confirme' ? '✅ Encaissé' : p.statut === 'en_attente' ? '⏳ En attente' : '❌ Annulé';
@@ -556,6 +595,33 @@
             document.getElementById('totalEncaisses').textContent = totalEncaisses;
             document.getElementById('totalEnAttente').textContent = totalEnAttente;
             document.getElementById('totalAnnules').textContent = totalAnnules;
+
+            if (pager) {
+                renderPagination(pager, paiementsCurrentPage, totalPages, (nextPage) => {
+                    paiementsCurrentPage = nextPage;
+                    displayPaiements(paiements);
+                });
+            }
+        }
+
+        function renderPagination(container, currentPage, totalPages, onChange) {
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+            const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+            container.innerHTML = `
+                <button type="button" class="btn-small" data-page="prev" ${prevDisabled}>← Précédent</button>
+                <span class="pagination-label">Page ${currentPage} / ${totalPages}</span>
+                <button type="button" class="btn-small" data-page="next" ${nextDisabled}>Suivant →</button>
+            `;
+            container.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
+                if (currentPage > 1) onChange(currentPage - 1);
+            });
+            container.querySelector('[data-page="next"]')?.addEventListener('click', () => {
+                if (currentPage < totalPages) onChange(currentPage + 1);
+            });
         }
 
         // Enregistrer un paiement
@@ -669,6 +735,7 @@
             document.getElementById('filterMois').value = '';
             document.getElementById('filterAnnee').value = '';
             document.getElementById('filterStatut').value = 'tous';
+            paiementsCurrentPage = 1;
             loadPaiements();
         }
 

@@ -1,0 +1,16 @@
+# Fichiers à ne pas envoyer sur le VPS
+.env
+.git
+.github
+__pycache__
+*.pyc
+instance
+venv
+.venv
+qr_codes
+database.db
+static/uploads/poi/*
+!static/uploads/poi/.gitkeep
+deploy/hostinger/backup.dump
+deploy/hostinger/backup.sql
+_tmp_*

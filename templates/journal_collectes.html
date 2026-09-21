@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journal des Collectes Terrain</title>
+    {% include '_head.html' %}
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            {% include '_header_top.html' %}
+        </header>
+
+        <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Terrain</p>
+                <h1 class="page-title">Journal des collectes</h1>
+                <p class="page-subtitle">Historique des opérations terrain</p>
+            </div>
+            <section>
+                <div class="section-header">
+                    <h2>Historique des collectes</h2>
+                </div>
+
+                <div class="journal-filters">
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label for="dateDebut">Date début</label>
+                            <input type="date" id="dateDebut">
+                        </div>
+                        <div class="form-group">
+                            <label for="dateFin">Date fin</label>
+                            <input type="date" id="dateFin">
+                        </div>
+                        <div class="form-group">
+                            <label for="collecteurFilter">Collecteur</label>
+                            <select id="collecteurFilter">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="searchInput">Recherche</label>
+                            <input type="text" id="searchInput" placeholder="POI, secteur, collecteur…">
+                        </div>
+                        <div class="form-group filter-actions">
+                            <button type="button" class="btn btn-primary" onclick="loadCollectes()">🔍 Filtrer</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetFilters()">Réinitialiser</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date et heure</th>
+                                <th>Secteur</th>
+                                <th>Collecteur</th>
+                                <th>Code POI</th>
+                                <th>Nom du POI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="collectesTableBody">
+                            <tr><td colspan="5" class="loading">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="collectesPagination" class="pagination-controls"></div>
+                <div class="journal-summary" id="journalSummary"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let collecteurs = [];
+        let allCollectes = [];
+        let collectesCurrentPage = 1;
+        const collectesRowsPerPage = 8;
+
+        async function loadCollecteurs() {
+            try {
+                const res = await fetch('/api/users');
+                collecteurs = await res.json();
+                const sel = document.getElementById('collecteurFilter');
+                sel.innerHTML = '<option value="">Tous</option>';
+                collecteurs.filter(u => ['agent_terrain', 'admin', 'conseiller_municipal'].includes(u.role)).forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = `${u.nom || u.username} (${u.username})`;
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadCollectes() {
+            const params = new URLSearchParams();
+            const dateDebut = document.getElementById('dateDebut').value;
+            const dateFin = document.getElementById('dateFin').value;
+            const collecteurId = document.getElementById('collecteurFilter').value;
+            const search = document.getElementById('searchInput').value.trim();
+            if (dateDebut) params.set('date_debut', dateDebut);
+            if (dateFin) params.set('date_fin', dateFin);
+            if (collecteurId) params.set('collecteur_id', collecteurId);
+            if (search) params.set('search', search);
+
+            const tbody = document.getElementById('collectesTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="loading">Chargement...</td></tr>';
+
+            try {
+                const res = await fetch('/api/journal-collectes?' + params.toString());
+                const data = await res.json();
+                tbody.innerHTML = '';
+                allCollectes = Array.isArray(data.collectes) ? data.collectes : [];
+                collectesCurrentPage = 1;
+
+                if (allCollectes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty">Aucune collecte</td></tr>';
+                    document.getElementById('collectesPagination').innerHTML = '';
+                } else {
+                    renderCollectesPage();
+                }
+
+                document.getElementById('journalSummary').textContent = `${allCollectes.length} collecte(s)`;
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" class="error">Erreur de chargement</td></tr>';
+                document.getElementById('collectesPagination').innerHTML = '';
+            }
+        }
+
+        function renderCollectesPage() {
+            const tbody = document.getElementById('collectesTableBody');
+            const pager = document.getElementById('collectesPagination');
+            tbody.innerHTML = '';
+
+            if (!allCollectes.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">Aucune collecte</td></tr>';
+                if (pager) pager.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(allCollectes.length / collectesRowsPerPage));
+            if (collectesCurrentPage > totalPages) collectesCurrentPage = totalPages;
+            if (collectesCurrentPage < 1) collectesCurrentPage = 1;
+            const start = (collectesCurrentPage - 1) * collectesRowsPerPage;
+            const pageItems = allCollectes.slice(start, start + collectesRowsPerPage);
+
+            pageItems.forEach(c => {
+                const row = document.createElement('tr');
+                const dateHeure = c.date_heure ? new Date(c.date_heure).toLocaleString('fr-FR', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                }) : '-';
+                const collecteur = c.collecteur_nom || c.collecteur_username || '-';
+                row.innerHTML = `
+                    <td>${dateHeure}</td>
+                    <td>${c.secteur || '-'}</td>
+                    <td>${collecteur}</td>
+                    <td><a href="/scan?code=${encodeURIComponent(c.boutique_code || '')}">${c.boutique_code || '-'}</a></td>
+                    <td>${c.boutique_nom || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (pager) {
+                renderPagination(pager, collectesCurrentPage, totalPages, (nextPage) => {
+                    collectesCurrentPage = nextPage;
+                    renderCollectesPage();
+                });
+            }
+        }
+
+        function renderPagination(container, currentPage, totalPages, onChange) {
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+            const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+            container.innerHTML = `
+                <button type="button" class="btn-small" data-page="prev" ${prevDisabled}>← Précédent</button>
+                <span class="pagination-label">Page ${currentPage} / ${totalPages}</span>
+                <button type="button" class="btn-small" data-page="next" ${nextDisabled}>Suivant →</button>
+            `;
+            container.querySelector('[data-page="prev"]')?.addEventListener('click', () => {
+                if (currentPage > 1) onChange(currentPage - 1);
+            });
+            container.querySelector('[data-page="next"]')?.addEventListener('click', () => {
+                if (currentPage < totalPages) onChange(currentPage + 1);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('dateDebut').value = '';
+            document.getElementById('dateFin').value = '';
+            document.getElementById('collecteurFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            loadCollectes();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCollecteurs();
+            loadCollectes();
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') loadCollectes();
+            });
+        });
+    </script>
+</body>
+</html>

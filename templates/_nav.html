@@ -1,6 +1,5 @@
-<nav>
+<nav class="app-nav" aria-label="Navigation principale">
     {% for url, label in nav_items %}
-    <a href="{{ url }}" {% if request.path == url or (url != '/' and request.path.startswith(url)) %}class="active"{% endif %}>{{ label }}</a>
+    <a href="{{ url }}" {% if request.path == url or (url == '/dashboard' and request.path == '/') or (url != '/' and url != '/dashboard' and request.path.startswith(url)) or (url == '/pois' and request.path in ['/boutiques', '/commerces']) %}class="active"{% endif %}>{{ label }}</a>
     {% endfor %}
-    <a href="{{ url_for('logout_page') }}" class="btn btn-secondary" style="margin-left: auto;">Déconnexion</a>
 </nav>

@@ -132,7 +132,18 @@ curl -X POST http://localhost:5000/api/paiements/mobile-money \
    gunicorn -w 4 -b 0.0.0.0:5000 app:app
    ```
 
-2. **Base de données**: Migrer vers PostgreSQL ou MySQL pour la production
+2. **Base de données** : PostgreSQL (`DATABASE_URL` dans `.env`)
+
+3. **Vérifier la migration** :
+   ```bash
+   python deploy/verify_migration_status.py
+   python deploy/verify_postgres.py
+   ```
+
+4. **Legacy — migration SQLite** (une seule fois, si jamais fait) :
+   ```bash
+   python deploy/migrate_sqlite_to_postgres.py --sqlite instance/database.db
+   ```
 
 3. **HTTPS**: Configurer un certificat SSL (Let's Encrypt)
 
@@ -144,7 +155,7 @@ Créer un fichier `.env`:
 
 ```
 FLASK_ENV=production
-DATABASE_URL=postgresql://user:password@localhost/fiscal_db
+DATABASE_URL=postgresql://user:password@localhost/paiement_fisc
 SECRET_KEY=your-secret-key-here
 ```
 

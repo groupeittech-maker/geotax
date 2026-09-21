@@ -3,21 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner QR Code - Contrôle Fiscal</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Scanner QR — GeoTax</title>
+    {% include '_head.html' %}
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🔍 Scanner QR Code</h1>
-            {% include '_nav.html' %}
+        <header class="app-header">
+            {% include '_header_top.html' %}
         </header>
 
         <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Terrain</p>
+                <h1 class="page-title">Scanner QR Code</h1>
+                <p class="page-subtitle">Vérification rapide du statut de paiement sur le terrain</p>
+            </div>
             <section class="scan-section">
                 <div class="scan-container">
-                    <h2>Scanner le QR Code d'une Boutique</h2>
+                    <h2>Scanner le QR code d'un POI</h2>
+
+                    <div id="scanSecureNotice" class="scan-notice scan-notice-warning" hidden>
+                        <strong>Caméra indisponible en HTTP</strong>
+                        <p>Les navigateurs n'autorisent la caméra que sur une connexion sécurisée (HTTPS) ou en local. Utilisez la <strong>saisie manuelle</strong> du code POI, ou configurez HTTPS sur le serveur.</p>
+                    </div>
                     
                     <!-- Boutons de choix de méthode -->
                     <div class="scan-methods">
@@ -31,6 +40,7 @@
 
                     <!-- Zone de scan caméra -->
                     <div id="cameraSection" style="display: none;">
+                        <div id="cameraError" class="scan-notice scan-notice-error" hidden></div>
                         <div id="reader" style="width: 100%; max-width: 500px; margin: 20px auto;"></div>
                         <button onclick="stopCameraScan()" class="btn btn-warning" style="display: none;" id="stopBtn">
                             ❌ Arrêter le Scan
@@ -40,9 +50,9 @@
                     <!-- Zone de saisie manuelle -->
                     <div id="manualSection" style="display: none;">
                         <div class="scan-input-group">
-                            <label for="codeInput">Code Boutique:</label>
+                            <label for="codeInput">Code POI :</label>
                             <div class="input-with-button">
-                                <input type="text" id="codeInput" placeholder="BOUTIQUE-57891" 
+                                <input type="text" id="codeInput" placeholder="POI-…" 
                                        onkeypress="if(event.key === 'Enter') scanBoutique()">
                                 <button onclick="scanBoutique()" class="btn btn-primary">🔍 Vérifier</button>
                             </div>
@@ -61,18 +71,18 @@
                     <div class="instruction-card">
                         <h3>📱 Pour les Contrôleurs</h3>
                         <ol>
-                            <li><strong>Méthode 1 - Scan Caméra:</strong>
+                            <li><strong>Méthode 1 - Scan Caméra</strong> (HTTPS requis) :
                                 <ul>
                                     <li>Cliquer sur "📷 Scanner avec la Caméra"</li>
                                     <li>Autoriser l'accès à la caméra si demandé</li>
-                                    <li>Pointer la caméra vers le QR code de la boutique</li>
+                                    <li>Pointer la caméra vers le QR code du POI</li>
                                     <li>Le scan est automatique - pas besoin de prendre une photo!</li>
                                 </ul>
                             </li>
                             <li><strong>Méthode 2 - Saisie Manuelle:</strong>
                                 <ul>
                                     <li>Cliquer sur "⌨️ Saisir Manuellement"</li>
-                                    <li>Entrer le code de la boutique (ex: BOUTIQUE-57891)</li>
+                                    <li>Entrer le code du POI</li>
                                     <li>Cliquer sur "🔍 Vérifier"</li>
                                 </ul>
                             </li>
@@ -81,10 +91,10 @@
                     </div>
                     
                     <div class="instruction-card">
-                        <h3>💳 Pour les Commerçants</h3>
+                        <h3>💳 Pour les Contribuables</h3>
                         <ol>
-                            <li><strong>Via USSD:</strong> Composez *123*CODE_BOUTIQUE*MONTANT#</li>
-                            <li><strong>Via Mobile Money:</strong> Envoyez le code boutique en référence</li>
+                            <li><strong>Via USSD :</strong> composez le code annoncé par la mairie, puis le code POI, puis le montant (format affiché après connexion).</li>
+                            <li><strong>Via Mobile Money :</strong> indiquez le code POI en référence</li>
                             <li>Le paiement est automatiquement enregistré</li>
                             <li>Conservez votre QR code pour les contrôles</li>
                         </ol>
@@ -98,19 +108,40 @@
         let html5QrcodeScanner = null;
         let isScanning = false;
 
+        function isSecureCameraContext() {
+            return window.isSecureContext === true;
+        }
+
+        function updateCameraAvailability() {
+            const notice = document.getElementById('scanSecureNotice');
+            const btnCamera = document.getElementById('btnCamera');
+            const secure = isSecureCameraContext();
+
+            if (!secure) {
+                notice.hidden = false;
+                btnCamera.disabled = true;
+                btnCamera.title = 'Nécessite HTTPS (connexion sécurisée)';
+            } else {
+                notice.hidden = true;
+                btnCamera.disabled = false;
+                btnCamera.title = '';
+            }
+        }
+
         // Vérifier si un code est passé en paramètre URL
         window.addEventListener('DOMContentLoaded', () => {
+            updateCameraAvailability();
+
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
             if (code) {
                 document.getElementById('codeInput').value = code;
                 showManualInput();
                 scanBoutique();
+            } else if (isSecureCameraContext() && isMobileDevice()) {
+                startCameraScan();
             } else {
-                // Par défaut, proposer le scan caméra
-                if (isMobileDevice()) {
-                    startCameraScan();
-                }
+                showManualInput();
             }
         });
 
@@ -118,7 +149,25 @@
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
+        function showCameraError(message) {
+            const errorBox = document.getElementById('cameraError');
+            errorBox.innerHTML = message;
+            errorBox.hidden = false;
+        }
+
+        function clearCameraError() {
+            const errorBox = document.getElementById('cameraError');
+            errorBox.innerHTML = '';
+            errorBox.hidden = true;
+        }
+
         function startCameraScan() {
+            if (!isSecureCameraContext()) {
+                showManualInput();
+                return;
+            }
+
+            clearCameraError();
             // Masquer les autres sections
             document.getElementById('manualSection').style.display = 'none';
             document.getElementById('scanResult').style.display = 'none';
@@ -150,7 +199,11 @@
                 document.getElementById('stopBtn').style.display = 'block';
             }).catch(err => {
                 console.error("Erreur lors du démarrage de la caméra:", err);
-                alert("Impossible d'accéder à la caméra. Vérifiez les permissions ou utilisez la saisie manuelle.");
+                const detail = err && err.message ? ` (${err.message})` : '';
+                showCameraError(
+                    `Impossible d'accéder à la caméra${detail}. Vérifiez les permissions du navigateur ou utilisez la saisie manuelle ci-dessous.`
+                );
+                document.getElementById('btnCamera').disabled = false;
                 showManualInput();
             });
         }
@@ -211,7 +264,7 @@
             const code = codeInput.value.trim();
             
             if (!code) {
-                alert('Veuillez saisir un code boutique');
+                alert('Veuillez saisir un code POI');
                 return;
             }
             
@@ -226,7 +279,9 @@
             resultDiv.innerHTML = '<div class="loading">Vérification en cours...</div>';
             
             try {
-                const response = await fetch(`/api/scan/${encodeURIComponent(cleanCode)}`);
+                const response = await fetch(`/api/scan/${encodeURIComponent(cleanCode)}`, {
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -235,7 +290,7 @@
                     resultDiv.innerHTML = `
                         <div class="result-error">
                             <h3>❌ Erreur</h3>
-                            <p>${data.error || 'Boutique non trouvée'}</p>
+                            <p>${data.error || 'POI introuvable'}</p>
                             <button onclick="startCameraScan()" class="btn btn-primary" style="margin-top: 10px;">
                                 🔄 Réessayer avec la caméra
                             </button>
@@ -246,7 +301,7 @@
                 resultDiv.innerHTML = `
                     <div class="result-error">
                         <h3>❌ Erreur de connexion</h3>
-                        <p>Impossible de vérifier la boutique. Vérifiez votre connexion internet.</p>
+                        <p>Impossible de vérifier le POI. Vérifiez votre connexion internet.</p>
                         <button onclick="startCameraScan()" class="btn btn-primary" style="margin-top: 10px;">
                             🔄 Réessayer avec la caméra
                         </button>
@@ -279,10 +334,11 @@
                     
                     <div class="result-details">
                         <div class="detail-row">
-                            <strong>Nom:</strong> ${data.boutique.nom}
+                            <strong>Nom :</strong> ${data.boutique.nom}
                         </div>
+                        ${(data.boutique.type_commerce?.nom || data.boutique.nature_poi_label) ? `<div class="detail-row"><strong>Type d'activité :</strong> ${data.boutique.type_commerce?.nom || data.boutique.nature_poi_label}</div>` : ''}
                         <div class="detail-row">
-                            <strong>Propriétaire:</strong> ${data.boutique.proprietaire || 'Non renseigné'}
+                            <strong>Responsable :</strong> ${data.boutique.proprietaire || 'Non renseigné'}
                         </div>
                         <div class="detail-row">
                             <strong>Adresse:</strong> ${data.boutique.adresse || 'Non renseignée'}
@@ -366,7 +422,8 @@
         async function simulerPaiementScan(codeBoutique) {
             try {
                 const response = await fetch(`/api/scan/${encodeURIComponent(codeBoutique)}/simuler-paiement`, {
-                    method: 'POST'
+                    method: 'POST',
+                    credentials: 'include'
                 });
                 const data = await response.json();
                 if (response.ok && data.success) {

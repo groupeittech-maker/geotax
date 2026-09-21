@@ -3,23 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Créer un compte - Espace Commerçant</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Créer un compte - Espace Contribuable</title>
+    {% include '_head.html' %}
 </head>
-<body>
+<body class="auth-page">
     <div class="container">
         <div class="commercant-auth-card">
             <div class="auth-header">
-                <h1>🏪 Créer mon compte</h1>
+                <div class="auth-brand">
+                    <span class="auth-brand-mark">GT</span>
+                </div>
+                <h1>Créer mon compte</h1>
                 <p>Créez un compte pour suivre l'historique de vos paiements fiscaux</p>
+                <p style="font-size:0.88rem;color:var(--text-muted);margin-top:0.35rem;">POI enregistré par un agent ? Utilisez les identifiants remis sur le terrain et <a href="{{ url_for('commercant_connexion') }}">connectez-vous</a>.</p>
             </div>
 
             <form id="registerForm" class="auth-form">
                 <div class="form-group">
-                    <label for="code_unique">Code Boutique *</label>
+                    <label for="code_unique">Code POI *</label>
                     <input type="text" id="code_unique" name="code_unique" 
                            value="{{ code_prefill or '' }}"
-                           placeholder="Ex: BOUTIQUE-57891" required 
+                           placeholder="Ex: POI-…" required 
                            style="text-transform: uppercase;">
                     <small>Le code figurant sur votre QR code</small>
                 </div>
@@ -27,8 +31,8 @@
                     <label for="telephone">Téléphone *</label>
                     <input type="tel" id="telephone" name="telephone" 
                            value="{{ telephone_prefill or '' }}"
-                           placeholder="+237 6XX XXX XXX" required>
-                    <small>Le numéro enregistré lors de l'enregistrement du commerce</small>
+                           placeholder="+242 06 XX XX XX XX" required>
+                    <small>Le numéro enregistré lors de la création du POI (ex. +242 06… ou 06…)</small>
                 </div>
                 <div class="form-group">
                     <label for="mot_de_passe">Mot de passe *</label>

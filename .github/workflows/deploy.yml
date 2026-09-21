@@ -1,0 +1,72 @@
+name: CI/CD GeoTax
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-geotax
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Vérifications
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compilation Python
+        run: python -m compileall -q app.py models.py tasks.py cache_utils.py db_utils.py geo_metrics.py logging_config.py spatial_utils.py
+
+      - name: Vérification des templates Jinja
+        run: |
+          pip install --quiet jinja2
+          python - <<'EOF'
+          from jinja2 import Environment, FileSystemLoader
+          env = Environment(loader=FileSystemLoader('templates'))
+          for t in env.list_templates():
+              env.get_template(t)
+          print('Templates OK:', len(env.list_templates()))
+          EOF
+
+  deploy:
+    name: Déploiement VPS
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT }}
+      APP_DIR: ${{ secrets.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configuration SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${VPS_PORT:-22}" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Synchronisation du code vers le VPS
+        run: |
+          rsync -az --delete \
+            --exclude-from=deploy/hostinger/rsync-exclude.txt \
+            -e "ssh -i ~/.ssh/deploy_key -p ${VPS_PORT:-22}" \
+            ./ "${VPS_USER}@${VPS_HOST}:${APP_DIR}/"
+
+      - name: Rebuild et redémarrage des conteneurs
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${VPS_PORT:-22}" "${VPS_USER}@${VPS_HOST}" \
+            "cd ${APP_DIR} && bash deploy/hostinger/update-on-server.sh"
+
+      - name: Health check
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${VPS_PORT:-22}" "${VPS_USER}@${VPS_HOST}" \
+            "PORT=\$(grep '^HTTP_PORT=' ${APP_DIR}/.env | cut -d= -f2); \
+             curl -fsS --max-time 20 http://127.0.0.1:\${PORT:-8080}/health/ready"

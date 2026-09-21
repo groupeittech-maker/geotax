@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoTax — Validation POI</title>
+    {% include '_head.html' %}
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            {% include '_header_top.html' %}
+        </header>
+
+        <main>
+            <div class="page-header">
+                <p class="page-eyebrow">Collecte terrain</p>
+                <h1 class="page-title">Validation des POI</h1>
+                <p class="page-subtitle">Contrôle qualité des POI — brouillons et dossiers en attente de validation</p>
+            </div>
+
+            <div class="validation-toolbar">
+                <div class="form-group">
+                    <label for="filterValidationStatut">Statut</label>
+                    <select id="filterValidationStatut" onchange="loadValidationQueue()">
+                        <option value="a_traiter" selected>À traiter (brouillons + en attente)</option>
+                        <option value="en_attente">En attente</option>
+                        <option value="brouillon">Brouillons</option>
+                        <option value="rejete">Rejetés</option>
+                        <option value="valide">Validés</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterValidationCategorie">Catégorie</label>
+                    <select id="filterValidationCategorie" onchange="loadValidationQueue()">
+                        <option value="">Toutes</option>
+                        <option value="contribuable">Contribuable</option>
+                        <option value="infrastructure">Infrastructure</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterValidationForme">Forme</label>
+                    <select id="filterValidationForme" onchange="loadValidationQueue()">
+                        <option value="">Toutes</option>
+                        <option value="point">Point</option>
+                        <option value="pylon">Pylône</option>
+                        <option value="pipeline">Pipeline</option>
+                        <option value="parcel">Parcelle</option>
+                        <option value="perimeter">Périmètre</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="loadValidationQueue()">🔄 Actualiser</button>
+            </div>
+
+            <div class="table-container">
+                <table class="validation-table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Nom</th>
+                            <th>Catégorie</th>
+                            <th>Forme</th>
+                            <th>Activité</th>
+                            <th>Responsable</th>
+                            <th>Localisation</th>
+                            <th>Statut</th>
+                            <th>Soumis le</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="validationTableBody">
+                        <tr><td colspan="10" class="loading">Chargement…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="validationModal" class="modal" hidden>
+        <div class="modal-overlay" onclick="closeValidationModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="validationModalTitle">Détail POI</h2>
+                <button type="button" class="modal-close" onclick="closeValidationModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="validationModalBody"></div>
+            <div class="modal-footer">
+                <div class="form-group" style="flex:1;text-align:left;">
+                    <label for="validationComment">Commentaire</label>
+                    <textarea id="validationComment" rows="2" placeholder="Commentaire (obligatoire en cas de rejet)"></textarea>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="closeValidationModal()">Fermer</button>
+                <button type="button" class="btn btn-danger" id="btnRejectPoi" onclick="rejectCurrentPoi()">Rejeter</button>
+                <button type="button" class="btn btn-primary" id="btnValidatePoi" onclick="validateCurrentPoi()">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let validationQueue = [];
+        let currentPoiId = null;
+
+        const STATUT_LABELS = {
+            brouillon: 'Brouillon',
+            en_attente: 'En attente',
+            valide: 'Validé',
+            rejete: 'Rejeté',
+        };
+
+        const CATEGORIE_LABELS = {
+            contribuable: 'Contribuable',
+            infrastructure: 'Infrastructure',
+        };
+
+        function statutBadge(s) {
+            const cls = {
+                brouillon: 'badge-neutral',
+                en_attente: 'badge-warning',
+                valide: 'badge-success',
+                rejete: 'badge-danger',
+            }[s] || 'badge-neutral';
+            return `<span class="poi-statut-badge ${cls}">${STATUT_LABELS[s] || s}</span>`;
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            try {
+                return new Date(iso).toLocaleString('fr-FR');
+            } catch (e) {
+                return iso;
+            }
+        }
+
+        function formatShapeLabel(p) {
+            const icon = p.feature_type_icon || '📍';
+            const label = p.feature_type_label || p.feature_type || 'Point';
+            return `${icon} ${label}`;
+        }
+
+        function formatMetrics(p) {
+            const parts = [];
+            if (p.radius_m) parts.push(`Rayon : ${Math.round(p.radius_m)} m`);
+            if (p.length_m) parts.push(`Longueur : ${(p.length_m / 1000).toFixed(2)} km`);
+            if (p.area_ha) parts.push(`Surface : ${p.area_ha.toFixed(3)} ha`);
+            if (p.perimeter_m) parts.push(`Périmètre : ${Math.round(p.perimeter_m)} m`);
+            const props = p.properties || {};
+            if (props.diameter_mm) parts.push(`Ø ${props.diameter_mm} mm`);
+            return parts.length ? parts.join(' · ') : '';
+        }
+
+        function carteUrlForPoi(p) {
+            return `/carte?poi_id=${p.id}`;
+        }
+
+        function buildQueueParams() {
+            const params = new URLSearchParams();
+            params.set('statut', document.getElementById('filterValidationStatut').value);
+            const cat = document.getElementById('filterValidationCategorie').value;
+            const forme = document.getElementById('filterValidationForme').value;
+            if (cat) params.set('categorie', cat);
+            if (forme) params.set('feature_type', forme);
+            return params;
+        }
+
+        async function loadValidationQueue() {
+            const tbody = document.getElementById('validationTableBody');
+            tbody.innerHTML = '<tr><td colspan="10" class="loading">Chargement…</td></tr>';
+            try {
+                const res = await fetch(`/api/pois/validation-queue?${buildQueueParams()}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erreur');
+                validationQueue = Array.isArray(data) ? data : [];
+                if (!validationQueue.length) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="no-data">Aucun POI pour ce filtre.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = validationQueue.map(p => {
+                    const loc = p.localisation_label || p.quartier_village?.nom || p.adresse || '—';
+                    const typeNom = p.type_commerce?.nom || '—';
+                    const catLabel = p.categorie_label || CATEGORIE_LABELS[p.categorie] || p.categorie || '—';
+                    const canAct = ['en_attente', 'brouillon'].includes(p.statut_validation);
+                    const statutHint = p.statut_validation === 'brouillon'
+                        ? ' <small title=\"Non soumis formellement — validable directement\">(brouillon)</small>' : '';
+                    return `<tr>
+                        <td>${p.code_unique}</td>
+                        <td>${p.nom}</td>
+                        <td>${catLabel}</td>
+                        <td>${formatShapeLabel(p)}</td>
+                        <td>${typeNom}</td>
+                        <td>${p.proprietaire || '—'}</td>
+                        <td><a href="${carteUrlForPoi(p)}" target="_blank" title="Voir sur la carte">${loc}</a></td>
+                        <td>${statutBadge(p.statut_validation)}${statutHint}</td>
+                        <td>${formatDate(p.submitted_at || p.date_creation)}</td>
+                        <td>
+                            <button type="button" class="btn-small" onclick="openValidationDetail(${p.id})">Examiner</button>
+                            <a class="btn-small" href="${carteUrlForPoi(p)}" target="_blank" title="Carte">🗺️</a>
+                            ${canAct ? `<button type="button" class="btn-small btn-primary" onclick="quickValidate(${p.id})">✓</button>` : ''}
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="10" class="error">${err.message}</td></tr>`;
+            }
+        }
+
+        function openValidationDetail(id) {
+            const p = validationQueue.find(x => x.id === id);
+            if (!p) return;
+            currentPoiId = id;
+            document.getElementById('validationModalTitle').textContent = p.nom;
+            const tech = p.donnees_administratives || {};
+            const techRows = Object.entries(tech).map(([k, v]) =>
+                `<tr><td>${k}</td><td>${v}</td></tr>`
+            ).join('') || '<tr><td colspan="2" class="no-data">Aucune donnée technique</td></tr>';
+            const metrics = formatMetrics(p);
+            const catLabel = p.categorie_label || CATEGORIE_LABELS[p.categorie] || p.categorie || '—';
+            const loc = p.localisation_label || p.quartier_village?.nom || p.adresse || '—';
+            const taxesBlock = (p.categorie === 'contribuable' && p.taxes && p.taxes.length)
+                ? `<h3>Taxes associées</h3><ul>${p.taxes.map(t =>
+                    `<li>${t.taxe?.nom || t.taxe_id}${t.montant_personnalise ? ` — ${t.montant_personnalise} FCFA` : ''}</li>`
+                ).join('')}</ul>`
+                : '';
+
+            document.getElementById('validationModalBody').innerHTML = `
+                <p><strong>Code :</strong> ${p.code_unique}</p>
+                <p><strong>Catégorie :</strong> ${catLabel}</p>
+                <p><strong>Forme :</strong> ${formatShapeLabel(p)}</p>
+                <p><strong>Activité :</strong> ${p.type_commerce?.nom || '—'}</p>
+                <p><strong>Responsable :</strong> ${p.proprietaire || '—'}</p>
+                <p><strong>Téléphone :</strong> ${p.telephone || '—'}</p>
+                <p><strong>Localisation :</strong> ${loc}
+                    <a href="${carteUrlForPoi(p)}" target="_blank" class="btn-small" style="margin-left:8px;">🗺️ Voir sur la carte</a>
+                </p>
+                ${metrics ? `<p><strong>Géométrie :</strong> ${metrics}</p>` : ''}
+                ${p.description ? `<p><strong>Description :</strong> ${p.description}</p>` : ''}
+                <p><strong>Statut :</strong> ${statutBadge(p.statut_validation)}</p>
+                ${p.photo_url ? `<p><img src="${p.photo_url}" alt="Photo POI" class="validation-photo"></p>` : ''}
+                ${taxesBlock}
+                <h3>Données techniques</h3>
+                <table class="validation-tech-table"><tbody>${techRows}</tbody></table>
+            `;
+            const canAct = ['en_attente', 'brouillon'].includes(p.statut_validation);
+            document.getElementById('btnValidatePoi').hidden = !canAct;
+            document.getElementById('btnRejectPoi').hidden = !canAct;
+            document.getElementById('validationComment').value = p.validation_comment || '';
+            document.getElementById('validationModal').hidden = false;
+        }
+
+        function closeValidationModal() {
+            document.getElementById('validationModal').hidden = true;
+            currentPoiId = null;
+        }
+
+        async function validateCurrentPoi() {
+            if (!currentPoiId) return;
+            await quickValidate(currentPoiId, document.getElementById('validationComment').value);
+            closeValidationModal();
+        }
+
+        async function rejectCurrentPoi() {
+            if (!currentPoiId) return;
+            const comment = document.getElementById('validationComment').value.trim();
+            if (!comment) {
+                alert('Un commentaire est requis pour rejeter.');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/boutiques/${currentPoiId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comment }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erreur');
+                closeValidationModal();
+                loadValidationQueue();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function quickValidate(id, comment) {
+            try {
+                const res = await fetch(`/api/boutiques/${id}/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comment: comment || '' }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erreur');
+                loadValidationQueue();
+                if (data.commercant_access) {
+                    alert(
+                        `POI validé.\n\nCompte contribuable :\n` +
+                        `Téléphone : ${data.commercant_access.telephone}\n` +
+                        `Mot de passe provisoire : ${data.commercant_access.mot_de_passe_temporaire}\n\n` +
+                        `À remettre au commerçant (changement obligatoire à la 1re connexion).`
+                    );
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadValidationQueue);
+    </script>
+</body>
+</html>

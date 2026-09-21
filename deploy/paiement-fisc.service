@@ -1,0 +1,22 @@
+[Unit]
+Description=Paiement Fiscal - application Flask
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/paiement-fisc
+EnvironmentFile=/var/www/paiement-fisc/.env
+ExecStart=/var/www/paiement-fisc/venv/bin/gunicorn -c deploy/gunicorn.conf.py app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+# Sécurité
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
