@@ -47,7 +47,8 @@ deploy/hostinger/backup.sql
 _tmp_*
 
 # Vidéos de démo et base de démonstration
-videos/
+# (sauf static/videos/ — clips intégrés à la landing page)
+/videos/
 demo.db
 
 # IDE

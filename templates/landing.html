@@ -237,12 +237,45 @@
         footer .brand { color: #fff; }
         footer .right { margin-left: auto; display: flex; gap: 1.2rem; }
 
+        /* ---------- Vidéos démo (cadre navigateur) ---------- */
+        .lp-video { max-width: 920px; margin: 0 auto; }
+        .lp-browser {
+            background: #fff; border: 1px solid var(--border); border-radius: 14px;
+            box-shadow: 0 18px 50px rgba(6, 47, 29, 0.18); overflow: hidden;
+        }
+        .lp-browser__bar {
+            display: flex; align-items: center; gap: 0.4rem;
+            padding: 0.55rem 0.9rem; background: #f2f7f4;
+            border-bottom: 1px solid var(--border);
+        }
+        .lp-browser__bar span {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #d9e4dc; display: inline-block;
+        }
+        .lp-browser__bar span:nth-child(1) { background: #f16d6d; }
+        .lp-browser__bar span:nth-child(2) { background: #f0c14b; }
+        .lp-browser__bar span:nth-child(3) { background: #4fbf7a; }
+        .lp-browser__bar em {
+            margin-left: 0.7rem; font-style: normal; font-size: 0.78rem;
+            color: var(--text-3);
+            background: #fff; border: 1px solid var(--border); border-radius: 9999px;
+            padding: 0.15rem 0.8rem;
+        }
+        .lp-browser video { display: block; width: 100%; height: auto; }
+        .lp-video__label {
+            text-align: center; color: var(--text-2); font-size: 0.95rem;
+            margin-top: 0.9rem; max-width: 60ch; margin-inline: auto;
+        }
+        .videos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2rem; margin-top: 2.5rem; }
+        .videos-grid .lp-video { margin: 0; }
+
         @media (max-width: 900px) {
             .hero-grid, .grid-2, .poi-cols { grid-template-columns: 1fr; }
             .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
             .grid-5, .pillars { grid-template-columns: repeat(2, 1fr); }
             .steps { grid-template-columns: repeat(3, 1fr); }
             .nav-links { display: none; }
+            .videos-grid { grid-template-columns: 1fr; }
             .mapmock-body { grid-template-columns: 1fr; }
             .mapmock-side { flex-direction: row; flex-wrap: wrap; border-left: none; border-top: 1px solid var(--border); }
             .mini-kpi { flex: 1 1 40%; }
@@ -260,6 +293,7 @@
         <a class="brand" href="/"><span class="brand-mark">GT</span> GeoTax</a>
         <div class="nav-links">
             <a href="#promesse">Plateforme</a>
+            <a href="#demo">Démo</a>
             <a href="#metiers">Métiers</a>
             <a href="#analyse">Analyse</a>
             <a href="#terrain">Terrain</a>
@@ -287,45 +321,19 @@
             </p>
             <div class="hero-cta">
                 <a href="/login" class="btn btn-primary">Demander une démonstration</a>
-                <a href="/login" class="btn btn-outline">Voir la plateforme en action →</a>
+                <a href="#demo" class="btn btn-outline">Voir la plateforme en action →</a>
             </div>
         </div>
-        <div class="mapmock" aria-hidden="true">
-            <div class="mapmock-top">
-                <span class="dot" style="background:var(--red)"></span>
-                <span class="dot" style="background:var(--yellow)"></span>
-                <span class="dot" style="background:var(--green)"></span>
-                &nbsp;Carte territoriale — GeoTax
-            </div>
-            <div class="mapmock-body">
-                <div class="mapmock-map">
-                    <span class="pin ok" style="top:18%;left:22%"></span>
-                    <span class="pin ok" style="top:30%;left:48%"></span>
-                    <span class="pin ok" style="top:55%;left:30%"></span>
-                    <span class="pin ok" style="top:70%;left:60%"></span>
-                    <span class="pin ok" style="top:40%;left:75%"></span>
-                    <span class="pin part" style="top:48%;left:15%"></span>
-                    <span class="pin part" style="top:65%;left:45%"></span>
-                    <span class="pin late" style="top:25%;left:62%"></span>
-                    <span class="pin late" style="top:78%;left:25%"></span>
-                    <span class="pin infra" style="top:12%;left:80%"></span>
-                    <span class="pin infra" style="top:58%;left:82%"></span>
-                    <span class="pin infra" style="top:82%;left:75%"></span>
+        <div class="lp-video">
+            <div class="lp-browser">
+                <div class="lp-browser__bar">
+                    <span></span><span></span><span></span>
+                    <em>geotax.ittechmed.com/carte</em>
                 </div>
-                <div class="mapmock-side">
-                    <div class="mini-kpi"><b>12 458</b><span>Éléments recensés</span></div>
-                    <div class="mini-kpi"><b>8 920</b><span>Validés</span></div>
-                    <div class="mini-kpi"><b>2 314</b><span>En attente</span></div>
-                    <div class="mini-kpi"><b>742</b><span>Activités / zone</span></div>
-                    <div class="mini-kpi"><b>3 842</b><span>Infrastructures</span></div>
-                </div>
+                <video src="{{ url_for('static', filename='videos/v3_carte_pois.mp4') }}"
+                       autoplay muted loop playsinline preload="metadata"></video>
             </div>
-            <div class="legend">
-                <span><i style="background:var(--green)"></i>Validé</span>
-                <span><i style="background:var(--orange)"></i>En validation</span>
-                <span><i style="background:var(--red)"></i>À contrôler</span>
-                <span><i style="background:var(--blue);border-radius:2px"></i>Infrastructure</span>
-            </div>
+            <p class="lp-video__label">Écoles, contribuables, pylônes, pipelines et zones protégées — votre territoire sur une seule carte.</p>
         </div>
     </div>
 </header>
@@ -405,6 +413,97 @@
                     <li>Comparaisons</li>
                     <li>Connaissance opérationnelle du territoire</li>
                 </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== DÉMONSTRATIONS VIDÉO ==================== -->
+<section id="demo">
+    <div class="wrap">
+        <div class="center" style="max-width:720px;margin:0 auto 2rem">
+            <span class="kicker">La plateforme en action</span>
+            <h2>Du terrain au tableau de bord, en vidéo</h2>
+            <p class="lead">
+                Des parcours complets enregistrés sur la plateforme : recensement,
+                géolocalisation, paiement et analyse — avec de vraies données de terrain.
+            </p>
+        </div>
+
+        <div class="lp-video" style="margin-bottom:2.6rem">
+            <div class="lp-browser">
+                <div class="lp-browser__bar">
+                    <span></span><span></span><span></span>
+                    <em>geotax.ittechmed.com</em>
+                </div>
+                <video src="{{ url_for('static', filename='videos/v1_cycle_contribuable.mp4') }}"
+                       controls muted playsinline preload="metadata"></video>
+            </div>
+            <p class="lp-video__label">
+                Cycle complet contribuable : enregistrement sur la carte, liste du référentiel,
+                puis paiement Mobile Money depuis l'espace contribuable — compte mis à jour.
+            </p>
+        </div>
+
+        <div class="videos-grid">
+            <div class="lp-video">
+                <div class="lp-browser">
+                    <div class="lp-browser__bar">
+                        <span></span><span></span><span></span>
+                        <em>geotax.ittechmed.com/carte</em>
+                    </div>
+                    <video src="{{ url_for('static', filename='videos/v2_ecole_parcelle.mp4') }}"
+                           controls muted playsinline preload="metadata"></video>
+                </div>
+                <p class="lp-video__label">
+                    Recenser une école : tracé de la parcelle sur la carte, puis caractéristiques —
+                    effectifs, classes, filles/garçons, superficie, agrément.
+                </p>
+            </div>
+
+            <div class="lp-video">
+                <div class="lp-browser">
+                    <div class="lp-browser__bar">
+                        <span></span><span></span><span></span>
+                        <em>geotax.ittechmed.com/carte</em>
+                    </div>
+                    <video src="{{ url_for('static', filename='videos/v3_carte_pois.mp4') }}"
+                           controls muted playsinline preload="metadata"></video>
+                </div>
+                <p class="lp-video__label">
+                    Carte interactive : écoles, contribuables, pylônes avec rayon de couverture,
+                    pipelines et forêts protégées — vue plan, satellite ou hybride.
+                </p>
+            </div>
+
+            <div class="lp-video">
+                <div class="lp-browser">
+                    <div class="lp-browser__bar">
+                        <span></span><span></span><span></span>
+                        <em>geotax.ittechmed.com/statistiques</em>
+                    </div>
+                    <video src="{{ url_for('static', filename='videos/v4_stats_ecoles.mp4') }}"
+                           controls muted playsinline preload="metadata"></video>
+                </div>
+                <p class="lp-video__label">
+                    Analyser les écoles : nombre d'établissements, répartition par commune,
+                    effectifs totaux de filles et de garçons.
+                </p>
+            </div>
+
+            <div class="lp-video">
+                <div class="lp-browser">
+                    <div class="lp-browser__bar">
+                        <span></span><span></span><span></span>
+                        <em>geotax.ittechmed.com/statistiques</em>
+                    </div>
+                    <video src="{{ url_for('static', filename='videos/v5_stats_agricoles.mp4') }}"
+                           controls muted playsinline preload="metadata"></video>
+                </div>
+                <p class="lp-video__label">
+                    Analyser les espaces agricoles : superficies, cultures, exploitants
+                    et irrigation — du recensement à l'indicateur.
+                </p>
             </div>
         </div>
     </div>
