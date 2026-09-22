@@ -128,7 +128,8 @@ def wizard_create_poi(page, categorie_btn_text, shape, form_filler):
     page.click(f'.poi-shape-card[data-shape="{shape}"]')
     page.wait_for_url('**/carte**', timeout=10000)
     page.wait_for_load_state('networkidle')
-    shot(page, 3500)                                    # carte chargée + panneau position
+    shot(page, 2500)                                    # carte chargée + panneau position
+    focus_map(page)
     # Position de départ : clic carte si possible, sinon saisie directe des GPS
     box = page.locator('#map').bounding_box()
     if box:
@@ -267,7 +268,8 @@ def clip_05_carte(page):
     """Carte fiscale : marqueurs, popup, filtres, fonds de carte."""
     login(page, *ADMIN)
     page.goto(f'{BASE}/carte')
-    shot(page, 6000)                                    # tuiles + clusters
+    shot(page, 5500)                                    # tuiles + clusters
+    focus_map(page)
     try_click(page, '.leaflet-marker-icon', 2500)       # popup d'un POI
     shot(page, 4000)
     try_click(page, '.leaflet-marker-icon >> nth=2', 2500)
@@ -506,6 +508,22 @@ def fill_tech_field(page, label_substr, value):
         return False
 
 
+def focus_map(page):
+    """Cale la carte dans le viewport : masque les éléments au-dessus de la
+    carte (titre, recherche, légende, compteurs) pour qu'elle soit entièrement
+    visible dans la vidéo."""
+    page.evaluate("""() => {
+        ['.page-header', '.map-search-bar', '.map-legend', '.map-info']
+            .forEach(sel => {
+                const el = document.querySelector(sel);
+                if (el) el.style.display = 'none';
+            });
+        const mc = document.querySelector('.map-controls');
+        if (mc) mc.scrollIntoView({block: 'start'});
+    }""")
+    shot(page, 800)
+
+
 def click_map_at(page, lat, lng):
     """Clique la carte aux coordonnées géographiques données."""
     pt = page.evaluate(
@@ -620,7 +638,8 @@ def clip_v2_ecole_parcelle(page):
     page.click('.poi-shape-card[data-shape="parcel"]')
     page.wait_for_url('**/carte**', timeout=10000)
     page.wait_for_load_state('networkidle')
-    shot(page, 3500)
+    shot(page, 2500)
+    focus_map(page)
     # Point de départ du tracé (quartier Ouenzé)
     type_slow(page, '#poiStartLat', '-4.2535', delay=60)
     type_slow(page, '#poiStartLng', '15.2865', delay=60)
@@ -671,7 +690,8 @@ def clip_v3_carte_pois(page):
     """Carte : école, contribuable, vue hybride, pylône + rayon, pipeline, forêt protégée."""
     login(page, *ADMIN)
     page.goto(f'{BASE}/carte')
-    shot(page, 6000)
+    shot(page, 5500)
+    focus_map(page)
     try_click(page, '#btnCluster', 1500)                # désactiver le regroupement
     shot(page, 1500)
     # École parcelle → popup avec caractéristiques
@@ -728,7 +748,8 @@ def clip_v5_stats_agricoles(page):
     shot(page, 5000)                                    # superficies par espace
     # Vue carte des parcelles agricoles
     page.goto(f'{BASE}/carte')
-    shot(page, 5500)
+    shot(page, 5000)
+    focus_map(page)
     open_feature_popup(page, 'GEO-A002', zoom=14)       # Périmètre maraîcher de Talangaï
     shot(page, 3000)
     open_feature_popup(page, 'GEO-A001', zoom=14)       # Champ de manioc
