@@ -37,22 +37,27 @@ def main():
     with app.app_context():
         init_db()
 
-        # ---------- Hiérarchie géographique ----------
-        congo = Pays.query.filter_by(code='CG').first() or Pays(
-            code='CG', nom='Congo', code_iso='COG',
-            center_lat=-4.2634, center_lng=15.2429, default_zoom=12)
-        db.session.add(congo)
-        db.session.flush()
+        # ---------- Hiérarchie géographique (idempotent) ----------
+        congo = Pays.query.filter_by(code='CG').first()
+        if not congo:
+            congo = Pays(code='CG', nom='Congo', code_iso='COG',
+                         center_lat=-4.2634, center_lng=15.2429, default_zoom=12)
+            db.session.add(congo)
+            db.session.flush()
 
-        bzv = Departement(pays_id=congo.id, code='BZV', nom='Brazzaville')
-        db.session.add(bzv)
-        db.session.flush()
+        bzv = Departement.query.filter_by(pays_id=congo.id, code='BZV').first()
+        if not bzv:
+            bzv = Departement(pays_id=congo.id, code='BZV', nom='Brazzaville')
+            db.session.add(bzv)
+            db.session.flush()
 
         communes = {}
         for code, nom in [('PTP', 'Poto-Poto'), ('BCG', 'Bacongo'), ('MGL', 'Moungali')]:
-            c = Commune(departement_id=bzv.id, code=code, nom=nom)
-            db.session.add(c)
-            db.session.flush()
+            c = Commune.query.filter_by(departement_id=bzv.id, code=code).first()
+            if not c:
+                c = Commune(departement_id=bzv.id, code=code, nom=nom)
+                db.session.add(c)
+                db.session.flush()
             communes[nom] = c
 
         quartiers = {}
@@ -62,22 +67,28 @@ def main():
             'Moungali': ['Ouenzé', 'Talangaï'],
         }.items():
             for i, qnom in enumerate(qs, 1):
-                q = QuartierVillage(commune_id=communes[cname].id,
-                                  code=f'{communes[cname].code}-Q{i}',
-                                  nom=qnom, type='quartier')
-                db.session.add(q)
-                db.session.flush()
+                code = f'{communes[cname].code}-Q{i}'
+                q = QuartierVillage.query.filter_by(commune_id=communes[cname].id,
+                                                    code=code).first()
+                if not q:
+                    q = QuartierVillage(commune_id=communes[cname].id,
+                                      code=code, nom=qnom, type='quartier')
+                    db.session.add(q)
+                    db.session.flush()
                 quartiers[qnom] = q
 
         marches = []
         for nom, q in [('Marché Total', quartiers['Marché Total']),
                        ('Marché Poto-Poto', quartiers['Centre Poto-Poto']),
                        ('Marché Moungali', quartiers['Ouenzé'])]:
-            m = Marche(quartier_village_id=q.id, code=f'MCH-{nom.split()[-1].upper()[:5]}',
-                       nom=nom, adresse=f'{nom}, Brazzaville')
-            db.session.add(m)
+            m = Marche.query.filter_by(nom=nom).first()
+            if not m:
+                m = Marche(quartier_village_id=q.id,
+                           code=f'MCH-{nom.split()[-1].upper()[:5]}',
+                           nom=nom, adresse=f'{nom}, Brazzaville')
+                db.session.add(m)
+                db.session.flush()
             marches.append(m)
-        db.session.flush()
 
         # ---------- Types de commerce ----------
         def secteur(code):
@@ -93,10 +104,12 @@ def main():
             ('ECOLE', 'École privée', 'EDUCATION'),
             ('TELESHOP', 'Cabine télécom / Mobile Money', 'SERVICES'),
         ]:
-            tc = TypeCommerce(code=code, nom=nom,
-                              secteur_id=secteur(s).id if secteur(s) else None)
-            db.session.add(tc)
-            db.session.flush()
+            tc = TypeCommerce.query.filter_by(code=code).first()
+            if not tc:
+                tc = TypeCommerce(code=code, nom=nom,
+                                  secteur_id=secteur(s).id if secteur(s) else None)
+                db.session.add(tc)
+                db.session.flush()
             types[code] = tc
 
         # ---------- Taxes ----------
@@ -126,26 +139,38 @@ def main():
             ('Librairie Nationale', 'Étienne Samba', 'Centre Poto-Poto', 'BOUT', -4.2629, 15.2438, 'valide', False),
             ('Bar Maquis La Paix', 'Victor Louzolo', 'Talangaï', 'RESTO', -4.2445, 15.2898, 'valide', False),
             ('Couture Chez Divine', 'Divine Mbani', 'Moungali Nord', 'COIFF', -4.2587, 15.2567, 'valide', False),
-            ('Boutique Frères Okemba', 'Jules Okemba', 'Ouenzé', 'BOUT', -4.2518, 15.2834, 'en_attente', True),
+            ('Poissonnerie du Marché', 'Claver Mbemba', 'Ouenzé', 'BOUT', -4.2510, 15.2822, 'valide', True),
+            ('Cybercafé Connexion+', 'Kevin Onguéné', 'Centre Poto-Poto', 'TELESHOP', -4.2655, 15.2455, 'valide', False),
+            ('Pharmacie Saint-Joseph', 'Dr. Lydie Itoua', 'Moungali Nord', 'PHARM', -4.2593, 15.2578, 'valide', False),
+            ('Maquis Chez Tantine', 'Bernadette Foumbou', 'Diata', 'RESTO', -4.2765, 15.2741, 'valide', False),
+            ('Boutique Okemba Frères', 'Jules Okemba', 'Ouenzé', 'BOUT', -4.2518, 15.2834, 'en_attente', True),
             ('Kiosque Presse Avenue', 'Sonia Mpaka', 'Centre Poto-Poto', 'BOUT', -4.2641, 15.2425, 'en_attente', False),
             ('Atelier Mécanique Rapide', 'Brice Kiala', 'Diata', 'QUINC', -4.2761, 15.2775, 'en_attente', False),
+            ('Pressing La Perle', 'Olga Massamba', 'Marché Total', 'COIFF', -4.2708, 15.2690, 'en_attente', True),
+            ('Boutique Sainte-Anne', 'Paulette Ndinga', 'Talangaï', 'BOUT', -4.2460, 15.2910, 'en_attente', False),
             ('Dépot Boissons du Coin', 'Henri Ngoma', 'Talangaï', 'BOUT', -4.2452, 15.2905, 'rejete', False),
         ]
 
-        agent = User(username='agent.terrain', nom='Serge Mfouka',
-                     role='agent_terrain', actif=True,
-                     password_hash=generate_password_hash('demo123'))
-        financier = User(username='agent.financier', nom='Clarisse Bounda',
-                         role='agent_financier', actif=True,
+        def get_or_create_user(username, nom, role):
+            u = User.query.filter_by(username=username).first()
+            if not u:
+                u = User(username=username, nom=nom, role=role, actif=True,
                          password_hash=generate_password_hash('demo123'))
-        conseiller = User(username='conseiller', nom='M. le Conseiller Municipal',
-                          role='conseiller_municipal', actif=True,
-                          password_hash=generate_password_hash('demo123'))
-        db.session.add_all([agent, financier, conseiller])
-        db.session.flush()
+                db.session.add(u)
+                db.session.flush()
+            return u
+
+        agent = get_or_create_user('agent.terrain', 'Serge Mfouka', 'agent_terrain')
+        financier = get_or_create_user('agent.financier', 'Clarisse Bounda', 'agent_financier')
+        conseiller = get_or_create_user('conseiller', 'M. le Conseiller Municipal',
+                                        'conseiller_municipal')
 
         boutiques = []
         for i, (nom, prop, qnom, tcode, lat, lng, statut, au_marche) in enumerate(contribuables, 1):
+            existing = Boutique.query.filter_by(code_unique=f'POI-{i:04d}').first()
+            if existing:
+                boutiques.append(existing)
+                continue
             q = quartiers[qnom]
             b = Boutique(
                 code_unique=f'POI-{i:04d}', nom=nom, proprietaire=prop,
@@ -196,11 +221,13 @@ def main():
             db.session.add(p)
             return p
 
-        # Mois couverts : juin → septembre 2026
+        # Mois couverts : juin → septembre 2026 (idempotent : on ignore les POI déjà payés)
         mois_liste = [(6, 2026), (7, 2026), (8, 2026), (9, 2026)]
         taxe_f, taxe_m, taxe_mk = taxes['TAXE_FISCALE'], taxes['TAXE_MUNICIPALE'], taxes['TAXE_MARCHE']
 
         for idx, b in enumerate(boutiques):
+            if Paiement.query.filter_by(boutique_id=b.id).first():
+                continue
             bts = [bt for bt in b.taxes if bt.active]
             for (m, a) in mois_liste:
                 for bt in bts:
@@ -216,9 +243,11 @@ def main():
                     else:
                         pay(b, bt.taxe, m, a, montant)
 
-        # Quelques paiements en attente de confirmation
-        for b in boutiques[:3]:
-            pay(b, taxe_m, 9, 2026, taxe_m.montant_attendu, statut='en_attente')
+        if not Paiement.query.filter_by(statut='en_attente').first():
+            for b in boutiques[:3]:
+                pay(b, taxe_m, 9, 2026, taxe_m.montant_attendu, statut='en_attente')
+            p_annule = pay(boutiques[10], taxe_f, 8, 2026, taxe_f.montant_attendu, statut='annule')
+            p_annule.notes = 'Paiement annulé — doublon saisi par erreur'
 
         # ---------- Infrastructures ----------
         infras = [
@@ -241,6 +270,8 @@ def main():
              {'surface_approx': '1.2 ha'}),
         ]
         for i, (nom, ftype, fshape, geom, props) in enumerate(infras, 1):
+            if Boutique.query.filter_by(code_unique=f'GEO-{i:04d}').first():
+                continue
             b = Boutique(
                 code_unique=f'GEO-{i:04d}', nom=nom,
                 categorie='infrastructure', feature_type=ftype,
@@ -254,20 +285,30 @@ def main():
             db.session.add(b)
 
         # ---------- Commerçant ----------
+        # Salon Élégance (idx 4 → impayée en septembre) pour démonter le paiement
+        boutique_salon = boutiques[3]
+        boutique_salon.telephone = '069876543'
+        if not Commercant.query.filter_by(telephone='069876543').first():
+            db.session.add(Commercant(boutique_id=boutique_salon.id, telephone='069876543',
+                                      mot_de_passe_hash=generate_password_hash('demo123'),
+                                      must_change_password=False, actif=True))
+        # Second compte commerçant (boutique à jour) pour variété
         boutique_marie = boutiques[0]
-        comm = Commercant(boutique_id=boutique_marie.id, telephone='061234567',
-                          mot_de_passe_hash=generate_password_hash('demo123'),
-                          must_change_password=False, actif=True)
-        db.session.add(comm)
+        boutique_marie.telephone = '061234567'
+        if not Commercant.query.filter_by(telephone='061234567').first():
+            db.session.add(Commercant(boutique_id=boutique_marie.id, telephone='061234567',
+                                      mot_de_passe_hash=generate_password_hash('demo123'),
+                                      must_change_password=False, actif=True))
 
         # ---------- Journal des collectes ----------
-        for i, b in enumerate(random.sample(boutiques, 8)):
-            q = b.quartier_village
-            db.session.add(CollecteTerrain(
-                date_heure=datetime.utcnow() - timedelta(days=random.randint(0, 14),
-                                                         hours=random.randint(0, 8)),
-                secteur=f'{q.nom}, {q.commune.nom}' if q else 'Brazzaville',
-                collecteur_id=agent.id, boutique_id=b.id))
+        if not CollecteTerrain.query.first():
+            for i, b in enumerate(random.sample(boutiques, 12)):
+                q = b.quartier_village
+                db.session.add(CollecteTerrain(
+                    date_heure=datetime.utcnow() - timedelta(days=random.randint(0, 14),
+                                                             hours=random.randint(0, 8)),
+                    secteur=f'{q.nom}, {q.commune.nom}' if q else 'Brazzaville',
+                    collecteur_id=agent.id, boutique_id=b.id))
 
         db.session.commit()
 

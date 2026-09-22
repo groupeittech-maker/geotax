@@ -243,11 +243,15 @@
             document.getElementById('btnValidatePoi').hidden = !canAct;
             document.getElementById('btnRejectPoi').hidden = !canAct;
             document.getElementById('validationComment').value = p.validation_comment || '';
-            document.getElementById('validationModal').hidden = false;
+            const modal = document.getElementById('validationModal');
+            modal.hidden = false;
+            modal.classList.add('modal-open');
         }
 
         function closeValidationModal() {
-            document.getElementById('validationModal').hidden = true;
+            const modal = document.getElementById('validationModal');
+            modal.hidden = true;
+            modal.classList.remove('modal-open');
             currentPoiId = null;
         }
 
