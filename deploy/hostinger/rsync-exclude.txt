@@ -14,3 +14,6 @@ static/uploads/poi/*
 deploy/hostinger/backup.dump
 deploy/hostinger/backup.sql
 _tmp_*
+videos/
+demo.db
+demo/

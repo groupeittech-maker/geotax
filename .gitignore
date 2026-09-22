@@ -46,6 +46,10 @@ deploy/hostinger/backup.sql
 # Fichiers temporaires
 _tmp_*
 
+# Vidéos de démo et base de démonstration
+videos/
+demo.db
+
 # IDE
 .vscode/
 .idea/
