@@ -458,11 +458,24 @@ window.GeoTaxMapFeatures = (function () {
         return parts.join(' · ') || '';
     }
 
+    function formatAdminData(data) {
+        if (!data || typeof data !== 'object') return '';
+        const entries = Object.entries(data)
+            .filter(([, v]) => v !== null && v !== undefined && v !== '')
+            .slice(0, 8);
+        if (!entries.length) return '';
+        return entries.map(([k, v]) => {
+            const label = k.replace(/_/g, ' ');
+            return `<div class="popup-info"><strong>${label.charAt(0).toUpperCase() + label.slice(1)} :</strong> ${v}</div>`;
+        }).join('');
+    }
+
     function buildPopup(props) {
         const metrics = formatMetric({ properties: props });
         const validation = props.statut_validation || 'brouillon';
         const catLabel = props.categorie === 'infrastructure' ? 'Infrastructure' : 'Contribuable';
         const displayName = props.name || props.nom || '—';
+        const adminData = formatAdminData(props.donnees_administratives);
         return `
             <div class="popup-content map-feature-popup">
                 <div class="popup-title">${props.feature_type_icon || ''} ${displayName}</div>
@@ -472,6 +485,7 @@ window.GeoTaxMapFeatures = (function () {
                 ${props.type_commerce?.nom ? `<div class="popup-info"><strong>Activité:</strong> ${props.type_commerce.nom}</div>` : ''}
                 ${props.description ? `<div class="popup-info">${props.description}</div>` : ''}
                 ${metrics ? `<div class="popup-info popup-metrics">${metrics}</div>` : ''}
+                ${adminData}
                 <div class="popup-info"><strong>Validation:</strong> ${validation}</div>
                 <div class="popup-actions">
                     <button type="button" class="map-popup-edit-btn" onclick="editMapFeature(${props.id})">✏️ Modifier</button>

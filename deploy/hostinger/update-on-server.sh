@@ -35,6 +35,14 @@ done
 echo "==> Migrations Alembic"
 docker compose --env-file .env exec -T app flask db upgrade || echo "WARN: migrations"
 
+echo "==> Migrations Python légères (colonnes)"
+docker compose --env-file .env exec -T app python -c "
+from app import app, _run_schema_migrations
+with app.app_context():
+    _run_schema_migrations()
+    print('Schema migrations OK')
+" || echo "WARN: migrations Python"
+
 echo "==> PostGIS (si image postgis/postgis)"
 docker compose --env-file .env exec -T app python -c "
 from app import app

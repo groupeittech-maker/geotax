@@ -516,7 +516,7 @@
                     const champsRows = (t.champs || []).map(c => {
                         let numericHtml = '';
                         if (c.numeric) {
-                            numericHtml = `<span class="stats-tech-numeric">min ${formatNumber(c.numeric.min, 0)} · max ${formatNumber(c.numeric.max, 0)} · moy ${formatNumber(c.numeric.avg, 0)}</span>`;
+                            numericHtml = `<span class="stats-tech-numeric">total ${formatNumber(c.numeric.sum, 0)} · min ${formatNumber(c.numeric.min, 0)} · max ${formatNumber(c.numeric.max, 0)} · moy ${formatNumber(c.numeric.avg, 0)}</span>`;
                         }
                         const barWidth = Math.max(4, c.taux_remplissage || 0);
                         return `<div class="stats-tech-champ-row">

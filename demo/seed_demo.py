@@ -25,7 +25,7 @@ os.environ.setdefault('FLASK_ENV', 'development')
 from app import app, init_db, generate_qr_code  # noqa: E402
 from models import (  # noqa: E402
     db, Pays, Departement, Commune, QuartierVillage, Marche,
-    SecteurActivite, TypeCommerce, Institut, Taxe, Boutique, BoutiqueTaxe,
+    SecteurActivite, TypeCommerce, ChampPoi, Institut, Taxe, Boutique, BoutiqueTaxe,
     Paiement, User, Commercant, CollecteTerrain,
 )
 from werkzeug.security import generate_password_hash  # noqa: E402
@@ -149,6 +149,8 @@ def main():
             ('Pressing La Perle', 'Olga Massamba', 'Marché Total', 'COIFF', -4.2708, 15.2690, 'en_attente', True),
             ('Boutique Sainte-Anne', 'Paulette Ndinga', 'Talangaï', 'BOUT', -4.2460, 15.2910, 'en_attente', False),
             ('Dépot Boissons du Coin', 'Henri Ngoma', 'Talangaï', 'BOUT', -4.2452, 15.2905, 'rejete', False),
+            ('Épicerie du Centre', 'Flore Okouma', 'Centre Poto-Poto', 'BOUT', -4.2635, 15.2445, 'valide', False),
+            ('Boutique La Lumière', 'Thomas Iloki', 'Moungali Nord', 'BOUT', -4.2590, 15.2575, 'valide', False),
         ]
 
         def get_or_create_user(username, nom, role):
@@ -201,7 +203,7 @@ def main():
 
         # ---------- Paiements ----------
         now = datetime.utcnow()
-        txn = 0
+        txn = Paiement.query.count()
         methodes = ['USSD', 'MTN_MONEY', 'AIRTEL_MONEY', 'GUICHET']
 
         def pay(b, taxe, mois, annee, montant, statut='confirme', jour=None):
@@ -284,7 +286,162 @@ def main():
             b.sync_coords_from_geometry()
             db.session.add(b)
 
+        # ---------- Types métier avec champs personnalisés ----------
+        def ensure_type(code, nom, secteur_code):
+            tc = TypeCommerce.query.filter_by(code=code).first()
+            if not tc:
+                tc = TypeCommerce(code=code, nom=nom,
+                                  secteur_id=secteur(secteur_code).id if secteur(secteur_code) else None)
+                db.session.add(tc)
+                db.session.flush()
+            return tc
+
+        def ensure_champ(tc, code, libelle, type_champ='str', placeholder=None, ordre=0):
+            ch = ChampPoi.query.filter_by(type_commerce_id=tc.id, code=code).first()
+            if not ch:
+                ch = ChampPoi(type_commerce_id=tc.id, code=code, libelle=libelle,
+                              type_champ=type_champ, placeholder=placeholder, ordre=ordre)
+                db.session.add(ch)
+            return ch
+
+        ecole_type = ensure_type('ECOLE_INFRA', 'École', 'EDUCATION')
+        for code, lib, typ, ph, o in [
+            ('nb_eleves', "Nombre d'élèves", 'int', 'ex. 320', 1),
+            ('nb_classes', 'Nombre de classes', 'int', 'ex. 8', 2),
+            ('nb_filles', 'Nombre de filles', 'int', 'ex. 170', 3),
+            ('nb_garcons', 'Nombre de garçons', 'int', 'ex. 150', 4),
+            ('superficie_ha', 'Superficie de la parcelle (ha)', 'float', 'ex. 1.5', 5),
+            ('agree', 'École agréée', 'radio', 'Oui, Non', 6),
+            ('numero_agrement', "Numéro d'agrément", 'str', "ex. AGR-2015-0456", 7),
+        ]:
+            ensure_champ(ecole_type, code, lib, typ, ph, o)
+
+        agri_type = ensure_type('AGRICOLE', 'Espace agricole', 'AUTRE')
+        for code, lib, typ, ph, o in [
+            ('superficie_ha', 'Superficie (ha)', 'float', 'ex. 12.5', 1),
+            ('culture_principale', 'Culture principale', 'str', 'ex. Manioc, maïs…', 2),
+            ('exploitant', 'Exploitant / coopérative', 'str', 'Nom du responsable', 3),
+            ('irrigation', 'Irrigation', 'radio', 'Oui, Non', 4),
+        ]:
+            ensure_champ(agri_type, code, lib, typ, ph, o)
+
+        foret_type = ensure_type('FORET', 'Espace protégé / Forêt', 'AUTRE')
+        for code, lib, typ, ph, o in [
+            ('superficie_ha', 'Superficie (ha)', 'float', 'ex. 2500', 1),
+            ('statut_protection', 'Statut de protection', 'select', 'Classée, Protégée, Réserve', 2),
+            ('gestionnaire', 'Gestionnaire', 'str', 'ex. Ministère des Eaux et Forêts', 3),
+        ]:
+            ensure_champ(foret_type, code, lib, typ, ph, o)
+        db.session.flush()
+
+        # ---------- Écoles (parcelles avec caractéristiques) ----------
+        ecoles = [
+            ('École Primaire Moungali II', 'Ouenzé', -4.2505, 15.2820,
+             {'nb_eleves': 320, 'nb_classes': 8, 'nb_filles': 170, 'nb_garcons': 150,
+              'superficie_ha': 1.5, 'agree': 'Oui', 'numero_agrement': 'AGR-2015-0456'}),
+            ('École Saint-Exupéry', 'Centre Poto-Poto', -4.2642, 15.2450,
+             {'nb_eleves': 540, 'nb_classes': 14, 'nb_filles': 260, 'nb_garcons': 280,
+              'superficie_ha': 2.1, 'agree': 'Oui', 'numero_agrement': 'AGR-2009-0112'}),
+            ('Collège de Diata', 'Diata', -4.2758, 15.2755,
+             {'nb_eleves': 410, 'nb_classes': 12, 'nb_filles': 230, 'nb_garcons': 180,
+              'superficie_ha': 1.8, 'agree': 'Oui', 'numero_agrement': 'AGR-2018-0301'}),
+            ('École Talangaï Centre', 'Talangaï', -4.2458, 15.2900,
+             {'nb_eleves': 215, 'nb_classes': 6, 'nb_filles': 120, 'nb_garcons': 95,
+              'superficie_ha': 0.9, 'agree': 'Non', 'numero_agrement': ''}),
+            ('École Les Lauriers', 'Marché Total', -4.2715, 15.2705,
+             {'nb_eleves': 380, 'nb_classes': 10, 'nb_filles': 195, 'nb_garcons': 185,
+              'superficie_ha': 1.2, 'agree': 'Oui', 'numero_agrement': 'AGR-2021-0078'}),
+            ('Groupe Scolaire Moungali Nord', 'Moungali Nord', -4.2595, 15.2570,
+             {'nb_eleves': 460, 'nb_classes': 12, 'nb_filles': 225, 'nb_garcons': 235,
+              'superficie_ha': 2.4, 'agree': 'Oui', 'numero_agrement': 'AGR-2013-0220'}),
+        ]
+
+        def square(lng, lat, d=0.0018):
+            return {'type': 'Polygon', 'coordinates': [[
+                [lng - d, lat - d], [lng + d, lat - d],
+                [lng + d, lat + d], [lng - d, lat + d], [lng - d, lat - d]]]}
+
+        for i, (nom, qnom, lat, lng, donnees) in enumerate(ecoles, 1):
+            code = f'GEO-E{i:03d}'
+            if Boutique.query.filter_by(code_unique=code).first():
+                continue
+            q = quartiers[qnom]
+            b = Boutique(
+                code_unique=code, nom=nom, categorie='infrastructure',
+                feature_type='parcel', geometry=json.dumps(square(lng, lat)),
+                donnees_administratives=json.dumps(donnees),
+                description=f'École — {donnees["nb_eleves"]} élèves, {donnees["nb_classes"]} classes',
+                pays_id=congo.id, quartier_village_id=q.id,
+                type_commerce_id=ecole_type.id, nature_poi='education',
+                statut_validation='valide',
+                date_creation=datetime.utcnow() - timedelta(days=random.randint(30, 180)))
+            b.sync_coords_from_geometry()
+            db.session.add(b)
+
+        # ---------- Espaces agricoles ----------
+        agri = [
+            ('Champ de manioc — Ouenzé', 'Ouenzé', -4.235, 15.295,
+             {'superficie_ha': 12.5, 'culture_principale': 'Manioc',
+              'exploitant': 'Coopérative Mavioka', 'irrigation': 'Non'}),
+            ('Périmètre maraîcher de Talangaï', 'Talangaï', -4.238, 15.305,
+             {'superficie_ha': 8.2, 'culture_principale': 'Légumes',
+              'exploitant': 'Association des maraîchers', 'irrigation': 'Oui'}),
+            ('Plantation de bananes — Diata', 'Diata', -4.285, 15.268,
+             {'superficie_ha': 5.6, 'culture_principale': 'Banane',
+              'exploitant': 'Famille Nzamba', 'irrigation': 'Non'}),
+            ('Parcelle agricole Moungali', 'Moungali Nord', -4.248, 15.265,
+             {'superficie_ha': 15.0, 'culture_principale': 'Maïs',
+              'exploitant': 'Coopérative Espérance', 'irrigation': 'Non'}),
+            ('Champ collectif Bacongo Sud', 'Marché Total', -4.280, 15.258,
+             {'superficie_ha': 6.8, 'culture_principale': 'Arachide',
+              'exploitant': 'Groupement Femmes Actives', 'irrigation': 'Oui'}),
+        ]
+        for i, (nom, qnom, lat, lng, donnees) in enumerate(agri, 1):
+            code = f'GEO-A{i:03d}'
+            if Boutique.query.filter_by(code_unique=code).first():
+                continue
+            q = quartiers[qnom]
+            b = Boutique(
+                code_unique=code, nom=nom, categorie='infrastructure',
+                feature_type='parcel', geometry=json.dumps(square(lng, lat, 0.003)),
+                donnees_administratives=json.dumps(donnees),
+                description=f"Espace agricole — {donnees['culture_principale']}, {donnees['superficie_ha']} ha",
+                pays_id=congo.id, quartier_village_id=q.id,
+                type_commerce_id=agri_type.id, nature_poi='autre',
+                statut_validation='valide',
+                date_creation=datetime.utcnow() - timedelta(days=random.randint(30, 180)))
+            b.sync_coords_from_geometry()
+            db.session.add(b)
+
+        # ---------- Forêt protégée (Cuvette-Ouest, nord du pays) ----------
+        if not Boutique.query.filter_by(code_unique='GEO-F001').first():
+            foret_geom = {'type': 'Polygon', 'coordinates': [[
+                [14.55, 0.75], [15.05, 0.75], [15.05, 1.10],
+                [14.55, 1.10], [14.55, 0.75]]]}
+            b = Boutique(
+                code_unique='GEO-F001', nom='Forêt protégée de Cuvette-Ouest',
+                categorie='infrastructure', feature_type='parcel',
+                geometry=json.dumps(foret_geom),
+                donnees_administratives=json.dumps({
+                    'superficie_ha': 2750, 'statut_protection': 'Protégée',
+                    'gestionnaire': 'Ministère des Eaux et Forêts'}),
+                description='Zone forestière protégée — Département de la Cuvette-Ouest',
+                pays_id=congo.id, type_commerce_id=foret_type.id, nature_poi='autre',
+                statut_validation='valide',
+                date_creation=datetime.utcnow() - timedelta(days=120))
+            b.sync_coords_from_geometry()
+            db.session.add(b)
+
+        db.session.flush()
+
         # ---------- Commerçant ----------
+        # Boutique La Lumière (idx 24 → impayée en septembre) — compte pour la démo paiement
+        boutique_lumiere = boutiques[23]
+        boutique_lumiere.telephone = '065555444'
+        if not Commercant.query.filter_by(telephone='065555444').first():
+            db.session.add(Commercant(boutique_id=boutique_lumiere.id, telephone='065555444',
+                                      mot_de_passe_hash=generate_password_hash('demo123'),
+                                      must_change_password=False, actif=True))
         # Salon Élégance (idx 4 → impayée en septembre) pour démonter le paiement
         boutique_salon = boutiques[3]
         boutique_salon.telephone = '069876543'

@@ -482,6 +482,259 @@ def clip_15_infrastructure(page):
     shot(page, 4500)
 
 
+def fill_tech_field(page, label_substr, value):
+    """Remplit un champ technique du formulaire POI d'après son libellé."""
+    grp = page.locator('.poi-admin-grid .form-group', has_text=label_substr).first
+    try:
+        radio = grp.locator('input[type=radio]')
+        if radio.count():
+            grp.locator(f'input[type=radio][value="{value}"]').check()
+            shot(page, 500)
+            return True
+        sel = grp.locator('select')
+        if sel.count():
+            sel.select_option(label=value, timeout=3000)
+            shot(page, 500)
+            return True
+        el = grp.locator('input, textarea').first
+        el.click()
+        el.press_sequentially(str(value), delay=60)
+        shot(page, 400)
+        return True
+    except Exception as e:
+        print(f'   champ "{label_substr}": {e}')
+        return False
+
+
+def click_map_at(page, lat, lng):
+    """Clique la carte aux coordonnées géographiques données."""
+    pt = page.evaluate(
+        "([lat, lng]) => { const p = map.latLngToContainerPoint([lat, lng]);"
+        " return {x: p.x, y: p.y}; }", [lat, lng])
+    box = page.locator('#map').bounding_box()
+    page.mouse.click(box['x'] + pt['x'], box['y'] + pt['y'])
+    shot(page, 1500)
+
+
+def open_feature_popup(page, code_unique, zoom=None):
+    """Centre la carte sur un POI et ouvre son popup (marqueur ou forme)."""
+    ok = page.evaluate("""([code, zoom]) => {
+        let target = null;
+        const visit = (l) => {
+            if (target) return;
+            if (l._popup && l._popup._content && String(l._popup._content).includes(code)) {
+                target = l;
+            }
+            if (!target && l.getLayers) l.getLayers().forEach(visit);
+        };
+        map.eachLayer(visit);
+        if (!target) return false;
+        let ll = null;
+        try { ll = target.getBounds ? target.getBounds().getCenter() : target.getLatLng(); }
+        catch (e) {}
+        if (!ll) return false;
+        map.closePopup();
+        map.flyTo(ll, zoom || Math.max(map.getZoom(), 13));
+        target.openPopup(ll);
+        return true;
+    }""", [code_unique, zoom])
+    if not ok:
+        print(f'   popup {code_unique} introuvable sur la carte')
+    shot(page, 3500)                                    # animation flyTo + popup
+    return ok
+
+
+def clip_v1_cycle_contribuable(page):
+    """Cycle complet : création contribuable → liste → paiement mobile money → à jour."""
+    # 1. Création par un admin
+    login(page, *ADMIN)
+    page.goto(f'{BASE}/pois')
+    page.wait_for_load_state('networkidle')
+    shot(page, 2500)
+
+    def fill(p):
+        fill_poi_form(
+            p, 'Boutique Nouvelle Aube', 'Cynthia Bissila', '067890123',
+            type_label='Boutique', quartier_label='Centre Poto-Poto',
+            adresse='Rue Matsoua', taxes_count=2)
+
+    wizard_create_poi(page, 'Ajouter un contribuable', 'point', fill)
+    shot(page, 800)
+    click_first_visible(page, ['#submitBtn', 'button:has-text("Enregistrer le POI")'])
+    shot(page, 4500)
+    # Modale « accès contribuable » éventuelle → fermer
+    try_click(page, '#commercantAccessModal button:has-text("Fermer")', 3000)
+    shot(page, 1500)
+
+    # 2. Liste des contribuables
+    page.goto(f'{BASE}/pois')
+    page.wait_for_load_state('networkidle')
+    shot(page, 3000)
+    type_slow(page, '#searchCommerce', 'Lumière')
+    shot(page, 2500)                                    # Boutique La Lumière — non à jour
+
+    # 3. Le contribuable paie depuis son espace (mobile money simulé)
+    page.goto(f'{BASE}/commercant/connexion')
+    shot(page, 1200)
+    page.fill('#identifiant', '065555444')
+    page.fill('#mot_de_passe', 'demo123')
+    shot(page, 600)
+    page.click('button[type=submit]')
+    page.wait_for_load_state('networkidle')
+    shot(page, 3500)                                    # résumé — situation non à jour
+    try_click(page, '#tabBtnPayer', 2000)
+    shot(page, 3000)                                    # taxes à payer
+    # Paiement de la première taxe
+    try_click(page, '.taxe-a-payer-card button:has-text("Payer")', 3000)
+    shot(page, 2500)                                    # modal USSD / Mobile Money
+    try_click(page, 'button.btn-simulation', 2500)      # 🧪 Simuler le paiement
+    shot(page, 3500)
+    try_click(page, '#paiementModal button:has-text("Annuler"), #paiementModal .modal-close', 2500)
+    shot(page, 1500)
+    # Paiement de la seconde taxe
+    try_click(page, '.taxe-a-payer-card button:has-text("Payer")', 2500)
+    shot(page, 2000)
+    try_click(page, 'button.btn-simulation', 2500)
+    shot(page, 3500)
+    try_click(page, '#paiementModal button:has-text("Annuler"), #paiementModal .modal-close', 2500)
+    shot(page, 1200)
+    try_click(page, '#tabBtnHistorique', 2000)
+    shot(page, 4000)                                    # historique des paiements
+
+    # 4. Compte mis à jour — vérification côté administration
+    page.goto(f'{BASE}/pois')
+    page.wait_for_load_state('networkidle')
+    type_slow(page, '#searchCommerce', 'Lumière')
+    shot(page, 3500)                                    # statut « à jour »
+
+
+def clip_v2_ecole_parcelle(page):
+    """Création d'une infrastructure École (parcelle tracée + caractéristiques)."""
+    login(page, *ADMIN)
+    page.goto(f'{BASE}/pois')
+    page.wait_for_load_state('networkidle')
+    try_click(page, '#poiTabGeo', 2000)
+    shot(page, 2200)
+    page.click('button:has-text("Ajouter une infrastructure")')
+    shot(page, 1200)
+    page.click('.poi-shape-card[data-shape="parcel"]')
+    page.wait_for_url('**/carte**', timeout=10000)
+    page.wait_for_load_state('networkidle')
+    shot(page, 3500)
+    # Point de départ du tracé (quartier Ouenzé)
+    type_slow(page, '#poiStartLat', '-4.2535', delay=60)
+    type_slow(page, '#poiStartLng', '15.2865', delay=60)
+    page.click('button:has-text("Marquer le départ")')
+    shot(page, 2200)
+    # Tracé du polygone : clic carte puis sommets saisis en GPS, puis fermeture
+    box = page.locator('#map').bounding_box()
+    page.mouse.click(box['x'] + box['width'] * 0.30, box['y'] + box['height'] * 0.65)
+    shot(page, 1500)
+    type_slow(page, '#poiTraceLat', '-4.2545', delay=50)
+    type_slow(page, '#poiTraceLng', '15.2890', delay=50)
+    page.click('button:has-text("Sommet intermédiaire")')
+    shot(page, 1200)
+    type_slow(page, '#poiTraceLat', '-4.2552', delay=50)
+    type_slow(page, '#poiTraceLng', '15.2870', delay=50)
+    page.click('button:has-text("Sommet intermédiaire")')
+    shot(page, 1200)
+    page.click('#poiTraceFinishBtn')
+    page.wait_for_url('**/pois**', timeout=15000)
+    page.wait_for_load_state('networkidle')
+    shot(page, 2000)                                    # formulaire caractéristiques
+    type_slow(page, '#nom', 'École Primaire Sainte-Famille', delay=55)
+    select_when_ready(page, '#type_commerce_id', contains='École')
+    shot(page, 1000)
+    # Onglet géolocalisation : rattacher au pays
+    page.click('#tabBtnGeoloc')
+    shot(page, 700)
+    try:
+        select_when_ready(page, '#pays_id', contains='Congo', timeout=5000)
+    except Exception:
+        pass
+    # Onglet technique : caractéristiques de l'école
+    page.click('#tabBtnTechnique')
+    shot(page, 1500)
+    fill_tech_field(page, "Nombre d'élèves", '285')
+    fill_tech_field(page, 'Nombre de classes', '9')
+    fill_tech_field(page, 'Nombre de filles', '148')
+    fill_tech_field(page, 'Nombre de garçons', '137')
+    fill_tech_field(page, 'Superficie de la parcelle', '1.8')
+    fill_tech_field(page, 'École agréée', 'Oui')
+    fill_tech_field(page, "Numéro d'agrément", 'AGR-2022-0107')
+    shot(page, 1000)
+    click_first_visible(page, ['#submitBtn', 'button:has-text("Ajouter")'])
+    shot(page, 4500)
+
+
+def clip_v3_carte_pois(page):
+    """Carte : école, contribuable, vue hybride, pylône + rayon, pipeline, forêt protégée."""
+    login(page, *ADMIN)
+    page.goto(f'{BASE}/carte')
+    shot(page, 6000)
+    try_click(page, '#btnCluster', 1500)                # désactiver le regroupement
+    shot(page, 1500)
+    # École parcelle → popup avec caractéristiques
+    open_feature_popup(page, 'GEO-E001', zoom=15)       # École Primaire Moungali II
+    shot(page, 3000)
+    # Contribuable → popup avec statut fiscal
+    open_feature_popup(page, 'POI-0001', zoom=15)       # Boutique Chez Marie
+    shot(page, 3000)
+    # Vue hybride
+    try_click(page, '#btnHybrid', 1500)
+    shot(page, 3500)
+    # Pylône → popup avec rayon d'influence visible
+    open_feature_popup(page, 'GEO-0001', zoom=14)       # Pylône MTN Poto-Poto
+    shot(page, 3000)
+    # Pipeline (canalisation d'eau) → popup longueur/diamètre
+    open_feature_popup(page, 'GEO-0003', zoom=14)       # Pipeline eau Moungali
+    shot(page, 3000)
+    # Forêt protégée au nord (Cuvette-Ouest) : survol puis popup
+    open_feature_popup(page, 'GEO-F001', zoom=8)
+    shot(page, 4000)
+
+
+def clip_v4_stats_ecoles(page):
+    """Statistiques : écoles — effectifs, répartition, total de filles."""
+    login(page, *ADMIN)
+    page.goto(f'{BASE}/statistiques')
+    page.wait_for_load_state('networkidle')
+    shot(page, 4500)
+    # Graphiques de répartition (type × arrondissement)
+    smooth_scroll(page, 9000, step=170, pause=320)
+    # Section analyse technique → bloc « École »
+    try:
+        page.locator('#theme-analyse-technique').scroll_into_view_if_needed(timeout=3000)
+        shot(page, 2500)
+    except Exception:
+        smooth_scroll(page, 6000, step=200, pause=300)
+    try_click(page, '.stats-tech-type-block summary:has-text("École")', 3000)
+    shot(page, 6000)                                    # détail : élèves, filles, garçons…
+    smooth_scroll(page, 4000, step=120, pause=300)
+
+
+def clip_v5_stats_agricoles(page):
+    """Statistiques : espaces agricoles — superficies, cultures, exploitants."""
+    login(page, *ADMIN)
+    page.goto(f'{BASE}/statistiques')
+    page.wait_for_load_state('networkidle')
+    shot(page, 3500)
+    try:
+        page.locator('#theme-analyse-technique').scroll_into_view_if_needed(timeout=3000)
+        shot(page, 2500)
+    except Exception:
+        smooth_scroll(page, 8000, step=200, pause=300)
+    try_click(page, '.stats-tech-type-block summary:has-text("agricole")', 3000)
+    shot(page, 5000)                                    # superficies par espace
+    # Vue carte des parcelles agricoles
+    page.goto(f'{BASE}/carte')
+    shot(page, 5500)
+    open_feature_popup(page, 'GEO-A002', zoom=14)       # Périmètre maraîcher de Talangaï
+    shot(page, 3000)
+    open_feature_popup(page, 'GEO-A001', zoom=14)       # Champ de manioc
+    shot(page, 3500)
+
+
 def clip_16_journal(page):
     """Journal des collectes : traçabilité terrain."""
     login(page, *ADMIN)
@@ -514,6 +767,12 @@ CLIPS = [
     ('14_users_journal', clip_14_users_journal),
     ('15_infrastructure', clip_15_infrastructure),
     ('16_journal', clip_16_journal),
+    # --- Scénarios détaillés (données démo enrichies) ---
+    ('v1_cycle_contribuable', clip_v1_cycle_contribuable),
+    ('v2_ecole_parcelle', clip_v2_ecole_parcelle),
+    ('v3_carte_pois', clip_v3_carte_pois),
+    ('v4_stats_ecoles', clip_v4_stats_ecoles),
+    ('v5_stats_agricoles', clip_v5_stats_agricoles),
 ]
 
 
