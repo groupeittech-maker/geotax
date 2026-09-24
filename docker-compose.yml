@@ -50,6 +50,12 @@ services:
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-1}
       GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-conctact@ittechmed.com}
+      MAIL_TO: ${MAIL_TO:-conctact@ittechmed.com}
       RUN_INIT_DB: ${RUN_INIT_DB:-0}
       SKIP_GEOM_BACKFILL: ${SKIP_GEOM_BACKFILL:-1}
       LOG_FORMAT: ${LOG_FORMAT:-json}

@@ -61,9 +61,17 @@ jobs:
             ./ "${VPS_USER}@${VPS_HOST}:${APP_DIR}/"
 
       - name: Rebuild et redémarrage des conteneurs
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
         run: |
           ssh -i ~/.ssh/deploy_key -p "${VPS_PORT:-22}" "${VPS_USER}@${VPS_HOST}" \
-            "cd ${APP_DIR} && bash deploy/hostinger/update-on-server.sh"
+            "cd ${APP_DIR} && \
+             SMTP_HOST='${SMTP_HOST}' SMTP_PORT='${SMTP_PORT}' SMTP_USER='${SMTP_USER}' SMTP_PASS='${SMTP_PASS}' \
+             bash deploy/hostinger/configure-smtp.sh && \
+             bash deploy/hostinger/update-on-server.sh"
 
       - name: Health check
         run: |

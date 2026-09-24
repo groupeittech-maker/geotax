@@ -1835,7 +1835,7 @@ def _send_contact_notification(req_obj):
 
     smtp_host = os.environ.get('SMTP_HOST')
     mail_to = os.environ.get('MAIL_TO', 'conctact@ittechmed.com')
-    mail_from = os.environ.get('MAIL_FROM', 'noreply@geotax.ittechmed.com')
+    mail_from = os.environ.get('MAIL_FROM', 'conctact@ittechmed.com')
     if not smtp_host:
         return False
     try:
@@ -1855,10 +1855,13 @@ def _send_contact_notification(req_obj):
         msg['From'] = formataddr(('GeoTax Landing', mail_from))
         msg['To'] = mail_to
         port = int(os.environ.get('SMTP_PORT', '587'))
-        with smtplib.SMTP(smtp_host, port, timeout=15) as s:
+        use_ssl = port == 465 or os.environ.get('SMTP_USE_SSL', '').lower() in ('1', 'true', 'ssl')
+        cls = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+        with cls(smtp_host, port, timeout=15) as s:
             s.ehlo()
-            if port != 25:
+            if not use_ssl and port != 25:
                 s.starttls()
+                s.ehlo()
             if os.environ.get('SMTP_USER'):
                 s.login(os.environ['SMTP_USER'], os.environ.get('SMTP_PASS', ''))
             s.sendmail(mail_from, [mail_to], msg.as_string())
