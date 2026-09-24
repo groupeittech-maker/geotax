@@ -1309,3 +1309,34 @@ class Configuration(db.Model):
         db.session.commit()
         return config
 
+
+
+class ContactRequest(db.Model):
+    """Demande de contact / démonstration reçue depuis la landing page."""
+    __tablename__ = 'contact_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(120), nullable=False)
+    organisation = db.Column(db.String(160))
+    telephone = db.Column(db.String(60))
+    email = db.Column(db.String(160))
+    activite = db.Column(db.String(160))
+    type_besoin = db.Column(db.String(120))
+    message = db.Column(db.Text)
+    ip = db.Column(db.String(60))
+    date_creation = db.Column(db.DateTime, default=datetime.utcnow)
+    traite = db.Column(db.Boolean, default=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nom': self.nom,
+            'organisation': self.organisation,
+            'telephone': self.telephone,
+            'email': self.email,
+            'activite': self.activite,
+            'type_besoin': self.type_besoin,
+            'message': self.message,
+            'date_creation': self.date_creation.isoformat() if self.date_creation else None,
+            'traite': self.traite,
+        }

@@ -3,8 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoTax — Plateforme de connaissance territoriale</title>
-    <meta name="description" content="Recensez, géolocalisez, structurez et analysez votre territoire. La plateforme qui transforme les données de terrain en indicateurs et en décisions.">
+    <title>GeoTax — Plateforme de connaissance territoriale | IT-Tech</title>
+    <meta name="description" content="Recensez, géolocalisez, structurez et analysez votre territoire. GeoTax transforme les données de terrain en cartes, indicateurs et décisions — pour collectivités et entreprises.">
+
+    <!-- SEO -->
+    <link rel="canonical" href="https://geotax.ittechmed.com/">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="IT-Tech">
+    <meta name="geo.region" content="CG">
+    <meta name="geo.placename" content="Pointe-Noire, Congo">
+    <meta name="theme-color" content="#0a5131">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GeoTax — IT-Tech">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:title" content="GeoTax — Maîtrisez votre territoire. Décidez avec vos données.">
+    <meta property="og:description" content="Plateforme de connaissance territoriale : recensement géolocalisé, cartographie interactive, indicateurs et recettes locales. Recenser · Géolocaliser · Analyser · Décider.">
+    <meta property="og:url" content="https://geotax.ittechmed.com/">
+    <meta property="og:image" content="https://geotax.ittechmed.com/static/og-image.png">
+    <meta property="og:image:alt" content="GeoTax — plateforme de connaissance territoriale">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GeoTax — Plateforme de connaissance territoriale">
+    <meta name="twitter:description" content="Recensez, géolocalisez et analysez votre territoire. Fiscalité locale, infrastructures, foncier, intelligence territoriale.">
+    <meta name="twitter:image" content="https://geotax.ittechmed.com/static/og-image.png">
+
+    <!-- Données structurées -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "IT-Tech",
+          "slogan": "Automatisation intelligente de votre métier",
+          "description": "Intégration ERP, développement logiciel, automatisation, data et IA",
+          "url": "https://geotax.ittechmed.com/",
+          "email": "conctact@ittechmed.com",
+          "telephone": "+242053052652",
+          "address": { "@type": "PostalAddress", "addressLocality": "Pointe-Noire", "addressCountry": "CG" },
+          "areaServed": { "@type": "Country", "name": "Congo" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "GeoTax",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://geotax.ittechmed.com/",
+          "provider": { "@type": "Organization", "name": "IT-Tech" },
+          "description": "Plateforme de connaissance territoriale : recensement géolocalisé des activités et infrastructures, cartographie interactive, tableaux de bord, recettes locales.",
+          "areaServed": "Congo, Afrique"
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Qu'est-ce que GeoTax ?",
+              "acceptedAnswer": { "@type": "Answer", "text": "GeoTax est une plateforme de connaissance territoriale : elle recense et géolocalise les activités, contribuables et infrastructures d'un territoire, puis transforme ces données en cartes, indicateurs et décisions." }
+            },
+            {
+              "@type": "Question",
+              "name": "GeoTax sert-il uniquement aux collectivités ?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Non. La fiscalité locale est un cas d'usage majeur (recensement des contribuables, suivi des paiements, recouvrement), mais la plateforme sert aussi aux télécoms, banques, réseaux commerciaux, foncier et gestion d'infrastructures." }
+            },
+            {
+              "@type": "Question",
+              "name": "Comment les données terrain sont-elles collectées ?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Les agents recensent directement sur le terrain (position GPS, photos, documents, caractéristiques métier) via un workflow Collecte → Validation → Exploitation, avec traçabilité complète." }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap">
@@ -237,6 +312,95 @@
         footer .brand { color: #fff; }
         footer .right { margin-left: auto; display: flex; gap: 1.2rem; }
 
+        /* ---------- Modal contact ---------- */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(6, 47, 29, 0.55); backdrop-filter: blur(3px);
+            display: none; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #fff; border-radius: var(--radius); max-width: 480px; width: 100%;
+            max-height: 92vh; overflow-y: auto; padding: 2rem 1.8rem; position: relative;
+            box-shadow: 0 24px 70px rgba(0,0,0,.3);
+        }
+        .modal .close {
+            position: absolute; top: 0.8rem; right: 1rem; border: none; background: none;
+            font-size: 1.6rem; cursor: pointer; color: var(--text-3); line-height: 1;
+        }
+        .modal h2 { font-size: 1.35rem; margin-bottom: 0.4rem; }
+        .modal-sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 1.2rem; }
+        .modal label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+        .modal input, .modal select, .modal textarea {
+            width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border);
+            border-radius: 0.55rem; font: inherit; font-size: 0.92rem; color: var(--text);
+        }
+        .modal input:focus, .modal select:focus, .modal textarea:focus {
+            outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft);
+        }
+        .modal textarea { resize: vertical; min-height: 90px; }
+        .modal .hp { position: absolute; left: -9999px; opacity: 0; height: 0; }
+        .modal .submit { width: 100%; margin-top: 1.3rem; border: none; }
+        .form-msg { margin-top: 0.9rem; font-size: 0.9rem; text-align: center; display: none; }
+        .form-msg.ok { display: block; color: #1e8e4e; }
+        .form-msg.err { display: block; color: var(--red); }
+
+        /* ---------- Chat flottant ---------- */
+        .chat-fab {
+            position: fixed; bottom: 24px; right: 24px; z-index: 150;
+            width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+            background: var(--green); color: #fff; font-size: 1.6rem;
+            box-shadow: 0 8px 24px rgba(10, 81, 49, 0.45);
+            transition: transform .15s ease;
+        }
+        .chat-fab:hover { transform: scale(1.08); }
+        .chat-panel {
+            position: fixed; bottom: 96px; right: 24px; z-index: 150;
+            width: 330px; max-width: calc(100vw - 40px);
+            background: #fff; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,.25);
+            display: none; flex-direction: column;
+        }
+        .chat-panel.open { display: flex; }
+        .chat-head {
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            color: #fff; padding: 1.1rem 1.25rem; font-weight: 700; font-size: 1rem;
+        }
+        .chat-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .chat-body .chat-intro { font-size: 0.88rem; color: var(--text-2); margin-bottom: 0.4rem; }
+        .chat-choice {
+            text-align: left; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: 10px;
+            background: #fbfdfc; font-size: 0.92rem; font-family: inherit; color: var(--text); cursor: pointer;
+            transition: border-color .12s ease, background .12s ease;
+        }
+        .chat-choice:hover { border-color: var(--green); background: var(--green-soft); }
+        .chat-wa {
+            margin-top: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #25d366; color: #fff; font-weight: 700; font-size: 0.92rem;
+            padding: 0.75rem; border-radius: 10px; text-decoration: none;
+        }
+        .chat-wa:hover { background: #1eb85a; }
+
+        /* ---------- Bandeau cookies ---------- */
+        .cookie-banner {
+            position: fixed; left: 24px; bottom: 24px; z-index: 160;
+            max-width: 420px; background: #fff; border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 1.25rem 1.4rem;
+            box-shadow: 0 16px 50px rgba(0,0,0,.22);
+            display: none;
+        }
+        .cookie-banner.show { display: block; }
+        .cookie-banner p { font-size: 0.85rem; color: var(--text-2); margin-bottom: 0.9rem; }
+        .cookie-banner .cookie-btns { display: flex; gap: 0.6rem; }
+        .cookie-banner .cookie-btns button {
+            flex: 1; padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.88rem;
+            font-weight: 700; cursor: pointer; font-family: inherit;
+        }
+        .cookie-accept { border: none; background: var(--green); color: #fff; }
+        .cookie-accept:hover { background: var(--green-dark); }
+        .cookie-refuse { border: 1px solid var(--border); background: #fff; color: var(--text-2); }
+        .cookie-refuse:hover { background: #f2f7f4; }
+
         /* ---------- Vidéos démo (cadre navigateur) ---------- */
         .lp-video { max-width: 920px; margin: 0 auto; }
         .lp-browser {
@@ -320,7 +484,7 @@
                 leurs infrastructures et leur territoire.
             </p>
             <div class="hero-cta">
-                <a href="/login" class="btn btn-primary">Demander une démonstration</a>
+                <a href="#contact" class="btn btn-primary" onclick="openModal('Démonstration');return false;">Demander une démonstration</a>
                 <a href="#demo" class="btn btn-outline">Voir la plateforme en action →</a>
             </div>
         </div>
@@ -796,7 +960,7 @@
             Déployez une plateforme adaptée à votre organisation, à vos données
             et à vos objectifs.
         </p>
-        <a href="/login" class="btn btn-primary" style="font-size:1.05rem;padding:0.9rem 2.2rem">Demander une démonstration</a>
+        <a href="#contact" class="btn btn-primary" style="font-size:1.05rem;padding:0.9rem 2.2rem" onclick="openModal('Démonstration');return false;">Demander une démonstration</a>
         &nbsp;
         <a href="/login" class="btn btn-yellow" style="font-size:1.05rem;padding:0.9rem 2.2rem">Explorer la plateforme →</a>
     </div>
@@ -813,6 +977,192 @@
         </div>
     </div>
 </footer>
+
+<!-- ==================== BANDEAU COOKIES ==================== -->
+<div class="cookie-banner" id="cookieBanner">
+    <p><strong>Cookies</strong> — Nous utilisons des cookies de mesure d'audience (Google Analytics, Meta Pixel) pour comprendre l'usage de cette page et améliorer nos services. Vous pouvez accepter ou refuser ; rien n'est chargé sans votre accord.</p>
+    <div class="cookie-btns">
+        <button class="cookie-refuse" onclick="setConsent(false)">Refuser</button>
+        <button class="cookie-accept" onclick="setConsent(true)">Accepter</button>
+    </div>
+</div>
+
+<!-- ==================== MODAL FORMULAIRE ==================== -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal();">
+    <div class="modal">
+        <button class="close" onclick="closeModal();" aria-label="Fermer">&times;</button>
+        <h2>Demander une démonstration</h2>
+        <p class="modal-sub">Décrivez votre besoin — notre équipe vous recontacte rapidement.</p>
+        <form id="contactForm">
+            <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off">
+            <label for="f-nom">Nom *</label>
+            <input type="text" id="f-nom" name="nom" required>
+            <label for="f-org">Organisation *</label>
+            <input type="text" id="f-org" name="organisation" required placeholder="Collectivité, entreprise, institution…">
+            <label for="f-tel">Téléphone / WhatsApp</label>
+            <input type="tel" id="f-tel" name="telephone">
+            <label for="f-email">E-mail</label>
+            <input type="email" id="f-email" name="email">
+            <label for="f-act">Activité</label>
+            <input type="text" id="f-act" name="activite" placeholder="Ex. mairie, telecom, banque, foncier…">
+            <label for="f-besoin">Type de besoin</label>
+            <select id="f-besoin" name="type_besoin">
+                <option>Démonstration</option>
+                <option>Collectivité — recettes locales</option>
+                <option>Cartographie d'infrastructures</option>
+                <option>Recensement d'activités</option>
+                <option>Étude / intelligence territoriale</option>
+                <option>Déploiement pour mon organisation</option>
+                <option>Autre demande</option>
+            </select>
+            <label for="f-desc">Description du besoin *</label>
+            <textarea id="f-desc" name="description" required placeholder="Décrivez votre territoire, vos données, ce que vous attendez de la plateforme…"></textarea>
+            <button type="submit" class="btn btn-primary submit">Envoyer ma demande</button>
+            <div class="form-msg" id="formMsg"></div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== CHAT FLOTTANT ==================== -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat();" aria-label="Ouvrir le chat">💬</button>
+<div class="chat-panel" id="chatPanel">
+    <div class="chat-head">💬 Comment pouvons-nous vous aider ?</div>
+    <div class="chat-body">
+        <p class="chat-intro">Choisissez un sujet, ou continuez directement sur WhatsApp :</p>
+        <button class="chat-choice" onclick="chatPick('Démonstration')">Voir une démonstration</button>
+        <button class="chat-choice" onclick="chatPick('Collectivité — recettes locales')">Collectivité — recettes locales</button>
+        <button class="chat-choice" onclick="chatPick('Cartographie d\'infrastructures')">Cartographier des infrastructures</button>
+        <button class="chat-choice" onclick="chatPick('Étude / intelligence territoriale')">Étude / intelligence territoriale</button>
+        <button class="chat-choice" onclick="openWhatsApp('Parler à IT-Tech')">Parler à IT-Tech</button>
+        <a class="chat-wa" href="#" onclick="openWhatsApp('');return false;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.5 14.2c-.2.7-1.3 1.3-1.9 1.4-.5 0-1 .2-3.4-.7-2.9-1.1-4.7-4-4.9-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.8 1.4 1.8 2.2 1.3 1.1 2.3 1.5 2.7 1.6.3.2.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4.1.2.1.7-.1 1.4z"/></svg>
+            Continuer sur WhatsApp
+        </a>
+    </div>
+</div>
+
+<script>
+var WA_NUMBER = '242053052652';
+var WA_BASE_TEXT = 'Bonjour IT-Tech, je souhaite échanger au sujet de GeoTax.';
+
+// ===================== Consentement cookies + tracking =====================
+// TODO: remplacer par les vrais identifiants avant mise en production
+var GA4_ID = 'G-XXXXXXXXXX';           // ID de mesure Google Analytics 4
+var META_PIXEL_ID = '000000000000000'; // ID du pixel Meta/Facebook
+var CONSENT_KEY = 'geotax_consent_v1';
+
+function getConsent() {
+    try { return localStorage.getItem(CONSENT_KEY); } catch (e) { return null; }
+}
+function setConsent(accepted) {
+    try { localStorage.setItem(CONSENT_KEY, accepted ? 'accepted' : 'refused'); } catch (e) {}
+    document.getElementById('cookieBanner').classList.remove('show');
+    if (accepted) { loadTracking(); }
+}
+function loadTracking() {
+    // Google Analytics 4
+    if (GA4_ID && GA4_ID.indexOf('G-') === 0 && GA4_ID !== 'G-XXXXXXXXXX') {
+        var g = document.createElement('script');
+        g.async = true;
+        g.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA4_ID;
+        document.head.appendChild(g);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { dataLayer.push(arguments); };
+        gtag('js', new Date());
+        gtag('config', GA4_ID);
+    }
+    // Meta Pixel
+    if (META_PIXEL_ID && META_PIXEL_ID !== '000000000000000') {
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
+            t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', META_PIXEL_ID);
+        fbq('track', 'PageView');
+    }
+}
+function trackEvent(gaEvent, fbEvent) {
+    if (window.gtag) { gtag('event', gaEvent); }
+    if (window.fbq) { fbq('track', fbEvent); }
+}
+(function () {
+    var c = getConsent();
+    if (c === 'accepted') { loadTracking(); }
+    else if (c === null) { document.getElementById('cookieBanner').classList.add('show'); }
+})();
+
+var modal = document.getElementById('modal');
+var chatPanel = document.getElementById('chatPanel');
+var besoinSelect = document.getElementById('f-besoin');
+var formMsg = document.getElementById('formMsg');
+
+function openModal(need) {
+    if (need) {
+        for (var i = 0; i < besoinSelect.options.length; i++) {
+            if (besoinSelect.options[i].text === need) { besoinSelect.selectedIndex = i; break; }
+        }
+    }
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+}
+function toggleChat(force) {
+    var open = chatPanel.classList.contains('open');
+    chatPanel.classList.toggle('open', force === true ? true : !open);
+}
+function chatPick(need) {
+    chatPanel.classList.remove('open');
+    openModal(need);
+}
+function openWhatsApp(context) {
+    trackEvent('contact', 'Contact');
+    var text = WA_BASE_TEXT + (context ? ' (' + context + ')' : '');
+    window.open('https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(text), '_blank');
+}
+
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeModal(); chatPanel.classList.remove('open'); } });
+
+document.getElementById('contactForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = this.querySelector('.submit');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours…';
+    formMsg.className = 'form-msg';
+
+    fetch('/api/contact', { method: 'POST', body: new FormData(this) })
+        .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+        .then(function (res) {
+            if (res.body && res.body.ok) {
+                trackEvent('generate_lead', 'Lead');
+                formMsg.textContent = 'Demande envoyée. Merci — nous revenons vers vous très vite.';
+                formMsg.className = 'form-msg ok';
+                document.getElementById('contactForm').reset();
+            } else {
+                var err = (res.body && res.body.error) || 'unknown';
+                var msgs = {
+                    missing_fields: 'Merci de remplir les champs obligatoires (nom, organisation, description et au moins un moyen de contact).',
+                    bad_email: 'Adresse e-mail invalide.',
+                    rate_limited: 'Trop de demandes — réessayez plus tard ou contactez-nous sur WhatsApp.'
+                };
+                formMsg.textContent = msgs[err] || "Erreur lors de l'envoi — réessayez ou contactez-nous sur WhatsApp.";
+                formMsg.className = 'form-msg err';
+            }
+        })
+        .catch(function () {
+            formMsg.textContent = "Erreur réseau — réessayez ou contactez-nous sur WhatsApp.";
+            formMsg.className = 'form-msg err';
+        })
+        .finally(function () {
+            btn.disabled = false;
+            btn.textContent = 'Envoyer ma demande';
+        });
+});
+</script>
 
 </body>
 </html>

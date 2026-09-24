@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, url_for, session, redirect, has_request_context
+from flask import Flask, render_template, request, jsonify, send_file, url_for, session, redirect, has_request_context, Response
 from functools import wraps
 from models import (
     db,
@@ -24,6 +24,7 @@ from models import (
     POI_STATUTS_VALIDATION,
     CollecteTerrain,
     MapFeature,
+    ContactRequest,
 )
 from geo_metrics import (
     MAP_FEATURE_TYPES,
@@ -1457,6 +1458,12 @@ def _run_schema_migrations():
     from db_utils import add_column_if_missing, is_postgresql
 
     engine = db.engine
+    # Tables nouvelles éventuelles (create_all est idempotent)
+    try:
+        db.create_all()
+    except Exception as mig_err:
+        db.session.rollback()
+        print(f'create_all (migrations) : {mig_err}')
     if is_postgresql(engine):
         try:
             db.session.execute(db.text("SET lock_timeout = '8s'"))
@@ -1691,7 +1698,8 @@ def require_auth():
     """Vérification d'authentification pour les routes protégées"""
     path = request.path
     # Routes publiques
-    if path in ('/', '/login', '/logout') or path.startswith('/commercant') or path.startswith('/static'):
+    if path in ('/', '/login', '/logout', '/robots.txt', '/sitemap.xml', '/api/contact') \
+            or path.startswith('/commercant') or path.startswith('/static'):
         return None
     if path == '/health' or path.startswith('/health/'):
         return None
@@ -1798,6 +1806,127 @@ def index():
     if session.get('user_id'):
         return redirect(get_home_url_for_role(session.get('user_role')))
     return render_template('landing.html')
+
+
+# ---------- Landing : SEO + formulaire de contact ----------
+
+_CONTACT_RATE = {}  # ip -> [timestamps]
+
+
+def _contact_rate_ok(ip):
+    """5 demandes / heure / IP."""
+    import time
+    now = time.time()
+    hist = [t for t in _CONTACT_RATE.get(ip, []) if t > now - 3600]
+    if len(hist) >= 5:
+        _CONTACT_RATE[ip] = hist
+        return False
+    hist.append(now)
+    _CONTACT_RATE[ip] = hist
+    return True
+
+
+def _send_contact_notification(req_obj):
+    """Email de notification si un SMTP est configuré (sinon silencieux)."""
+    import os
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.utils import formataddr
+
+    smtp_host = os.environ.get('SMTP_HOST')
+    mail_to = os.environ.get('MAIL_TO', 'conctact@ittechmed.com')
+    mail_from = os.environ.get('MAIL_FROM', 'noreply@geotax.ittechmed.com')
+    if not smtp_host:
+        return False
+    try:
+        subject = f"[GeoTax Landing] {req_obj.organisation or req_obj.nom} — {req_obj.type_besoin or 'Demande'}"
+        body = (
+            "Nouvelle demande depuis la landing page GeoTax\n\n"
+            f"Nom : {req_obj.nom}\n"
+            f"Organisation : {req_obj.organisation}\n"
+            f"Téléphone : {req_obj.telephone}\n"
+            f"Email : {req_obj.email}\n"
+            f"Activité : {req_obj.activite}\n"
+            f"Type de besoin : {req_obj.type_besoin}\n\n"
+            f"{req_obj.message}\n"
+        )
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = subject
+        msg['From'] = formataddr(('GeoTax Landing', mail_from))
+        msg['To'] = mail_to
+        port = int(os.environ.get('SMTP_PORT', '587'))
+        with smtplib.SMTP(smtp_host, port, timeout=15) as s:
+            s.ehlo()
+            if port != 25:
+                s.starttls()
+            if os.environ.get('SMTP_USER'):
+                s.login(os.environ['SMTP_USER'], os.environ.get('SMTP_PASS', ''))
+            s.sendmail(mail_from, [mail_to], msg.as_string())
+        return True
+    except Exception as e:
+        print(f'Notification contact : {e}')
+        return False
+
+
+@app.route('/api/contact', methods=['POST'])
+def api_contact():
+    """Endpoint public du formulaire de la landing page."""
+    data = request.form or request.get_json(silent=True) or {}
+
+    # Honeypot anti-bot
+    if data.get('website'):
+        return jsonify({'ok': True})
+
+    def field(k, max_len=255):
+        return str(data.get(k) or '').strip()[:max_len]
+
+    nom = field('nom', 120)
+    organisation = field('organisation', 160)
+    telephone = field('telephone', 60)
+    email = field('email', 160)
+    activite = field('activite', 160)
+    type_besoin = field('type_besoin', 120)
+    message = field('description', 4000)
+
+    if not nom or not organisation or (not telephone and not email) or not message:
+        return jsonify({'ok': False, 'error': 'missing_fields'}), 422
+    if email and ('@' not in email or '.' not in email.split('@')[-1]):
+        return jsonify({'ok': False, 'error': 'bad_email'}), 422
+
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or 'unknown').split(',')[0].strip()
+    if not _contact_rate_ok(ip):
+        return jsonify({'ok': False, 'error': 'rate_limited'}), 429
+
+    req_obj = ContactRequest(
+        nom=nom, organisation=organisation, telephone=telephone, email=email,
+        activite=activite, type_besoin=type_besoin, message=message, ip=ip,
+    )
+    db.session.add(req_obj)
+    db.session.commit()
+    email_sent = _send_contact_notification(req_obj)
+    return jsonify({'ok': True, 'id': req_obj.id, 'emailSent': email_sent})
+
+
+@app.route('/robots.txt')
+def robots_txt():
+    return Response(
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /dashboard\nDisallow: /pois\nDisallow: /api/\nDisallow: /carte\n"
+        "Disallow: /paiements\nDisallow: /validation\nDisallow: /parametrage\n"
+        "Disallow: /admin\nDisallow: /commercant\n\n"
+        f"Sitemap: {request.url_root}sitemap.xml\n",
+        mimetype='text/plain')
+
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    urls = ['/', '/login']
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n' \
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' \
+          + ''.join(f'  <url><loc>{request.url_root.rstrip("/")}{u}</loc></url>\n' for u in urls) \
+          + '</urlset>\n'
+    return Response(xml, mimetype='application/xml')
 
 
 @app.route('/dashboard')
